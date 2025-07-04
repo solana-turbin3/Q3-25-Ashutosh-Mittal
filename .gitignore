@@ -4,3 +4,5 @@ node_modules
 **/*.rs.bk
 *.pdb
 target/
+/Turbin3-wallet.json
+Turbin3-wallet.json
