@@ -1,0 +1,25 @@
+{
+  "name": "Generug AASHU",
+  "description": "Nature rugpull",
+  "image": "https://gateway.irys.xyz/2GnmQHYeDXR6fRLGHwiji7amJoo5ixRz3X2VTGMbmXKu",
+  "external_url": "https://example.com",
+  "attributes": [
+    {
+      "trait_type": "Color Palette",
+      "value": "Nature"
+    },
+    {
+      "trait_type": "Number of color",
+      "value": "5"
+    }
+  ],
+  "properties": {
+    "files": [
+      {
+        "uri": "https://gateway.irys.xyz/2GnmQHYeDXR6fRLGHwiji7amJoo5ixRz3X2VTGMbmXKu",
+        "type": "image/jpeg"
+      }
+    ],
+    "category": "image"
+  }
+}
