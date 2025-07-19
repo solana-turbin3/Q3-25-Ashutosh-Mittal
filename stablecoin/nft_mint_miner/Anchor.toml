@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-amm = "6rLFSCkzezVaS641zUhsM7SbBHdaQKrKCma5znh3HF4Q"
+nft_mint_miner = "En3mGHz3rK9bMp7trVvNrUZrgfsQwd934td2CJcAjTCr"
 
 [registry]
 url = "https://api.apr.dev"
