@@ -142,8 +142,8 @@ pub struct CreateNFT<'info> {
         init,
         payer = miner,
         mint::decimals = 0,
-        mint::authority = mint_authority,
-        mint::freeze_authority = mint_authority,
+        mint::authority = miner,
+        mint::freeze_authority = miner,
         seeds = ["nft_mint".as_bytes(), program_info.nft_ids.to_le_bytes().as_ref()],
         bump
     )]
