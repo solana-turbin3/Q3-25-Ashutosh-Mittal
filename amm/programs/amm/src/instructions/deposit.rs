@@ -5,7 +5,7 @@ use anchor_spl::{
 };
 use constant_product_curve::ConstantProduct;
 
-use crate::state::Config;
+use crate::{state::Config, error::AmmError};
 
 #[derive(Accounts)]
 // #[instruction(seed: u64)]
@@ -72,8 +72,23 @@ pub struct Deposit<'info> {
 
 impl<'info> Deposit<'info> {
 
-        pub fn deposit(&mut self, is_x:bool, amount: u64) -> Result<()> {
-            
+        pub fn deposit(&mut self, is_x:bool, amount: u64, max_x: u64, max_y:u64) -> Result<()> {
+            require!(self.config.locked == false, AmmError::PoolLocked);
+            require!(amount != 0, AmmError::InvalidAmount);
+
+            let(x,y)= match self.mint_lp.supply == 0 && self.vault_x.amount == 0 && self.vault_y.amount == 0 {
+                true => (max_x, max_y),
+                false => {
+                    let amount = ConstantProduct::xy_deposit_amounts_from_l( self.vault_x.amount, self.vault_y.amount,  self.mint_lp.supply,  amount,  6).unwrap();
+                    (amount.x, amount.y)
+                }
+            };
+
+            require!(x<=max_x && y <= max_y, AmmError::SlippageExceeded);
+
+            self.deposit_tokens(true, x);
+            self.deposit_tokens(false, y);
+            self.mint_lp_token(amount)
         }
 
     pub fn deposit_tokens(&mut self, is_x:bool, amount: u64) -> Result<()> {
