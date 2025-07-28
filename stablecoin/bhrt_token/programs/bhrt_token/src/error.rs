@@ -1,7 +1,9 @@
 use anchor_lang::prelude::*;
 
 #[error_code]
-pub enum ErrorCode {
-    #[msg("Custom error message")]
-    CustomError,
+pub enum NftMintError {
+    #[msg("The signer is not an approved miner.")]
+    MinerNotApproved,
+    #[msg("This miner has already been approved.")]
+    MinerAlreadyApproved,
 }
