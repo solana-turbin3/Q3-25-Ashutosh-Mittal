@@ -1,15 +1,11 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
-    associated_token::AssociatedToken, 
-    token_interface::{ Mint, TokenAccount, TransferChecked, TokenInterface, transfer_checked},
-    metadata::{
-    create_master_edition_v3, create_metadata_accounts_v3, CreateMasterEditionV3,
-    CreateMetadataAccountsV3, Metadata,
-},
-token_2022::{MintTo, mint_to}
+    associated_token::AssociatedToken, metadata::{
+    create_master_edition_v3, create_metadata_accounts_v3, verify_sized_collection_item, CreateMasterEditionV3, CreateMetadataAccountsV3, Metadata, VerifySizedCollectionItem
+}, token_2022::{mint_to, MintTo}, token_interface::{ transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked}
 };
 
-use mpl_token_metadata::types::DataV2;
+use mpl_token_metadata::types::{DataV2, Collection};
 
 use crate::{error::NftMintError};
 use crate::state::{ProgramState, MinerInfo, AmmConfig};
@@ -490,28 +486,38 @@ pub struct NftMinted {
     pub nft_id: u64,
     pub mint: Pubkey,
     pub owner: Pubkey,
+    pub collection_mint: Pubkey,
+    pub collection_metadata: Pubkey,
+    pub collection_master_edition: Pubkey,
+    pub collection_authority: Pubkey,
 }
 
 
 impl<'info> OnboardMiner<'info> {
 
 
-     pub fn create_nft( &mut self, bump: &OnboardMinerBumps,name: String, uri: String,) -> Result<()> {
+     pub fn onboard_miner( &mut self, bump: &OnboardMinerBumps,name: String, uri: String,nft_id: u64, mining_power: u64) -> Result<()> {
 
-        require!(self.nft_program_info.miners.contains(&self.miner.key()), NftMintError::MinerNotApproved);
+        require!(self.program_state.approved_miners.contains(&self.miner.key()), NftMintError::MinerNotApproved);
 
-        self.nft_program_info.nft_id_counter += 1;
+        self.program_state.nft_id_counter += 1;
 
         msg!("Creating seeds");
-        // let id_bytes = self.nft_program_info.nft_id_counter.to_le_bytes();
+        // let id_bytes = self.program_state.nft_id_counter.to_le_bytes();
         // let binding = self.miner.key();
         // let seeds = &["mint".as_bytes(), binding.as_ref(), id_bytes.as_ref(), &[bump.mint]];
-        let seeds = &["nft_program_info".as_bytes(),&[self.nft_program_info.bump]];
-    
+        // let miner_nft_seeds = &["nft_mint".as_bytes(),self.miner.key().as_ref(), nft_id.to_le_bytes().as_ref(), &[self.program_state.bhrt_mint_bump]];
+        let miner_nft_seeds: &[&[&[u8]]; 1] = &[&[
+            b"nft_mint", 
+            self.miner.key.as_ref(), 
+            &nft_id.to_le_bytes()[..],
+            &[self.program_state.bhrt_mint_bump]
+        ]];
+        
         let mut nft_name: String = "Bitcoin Standard Hashrate Token Agreement: ".to_string(); 
         nft_name.push_str(&name);
 
-        let symbol = "BHRA".to_string(); 
+        let symbol: String = "BHRT".to_string(); 
 
         msg!("Run mint_to");
 
@@ -519,38 +525,45 @@ impl<'info> OnboardMiner<'info> {
             CpiContext::new_with_signer(
                 self.token_program.to_account_info(),
                 MintTo {
-                    authority: self.nft_program_info.to_account_info(),
-                    to: self.token_account.to_account_info(),
-                    mint: self.mint.to_account_info(),
+                    authority: self.authority.to_account_info(),
+                    to: self.miner_nft_token_account.to_account_info(),
+                    mint: self.miner_nft_mint.to_account_info(),
                 },
-                &[&seeds[..]],
+                // &[&miner_nft_seeds[..]],
+                miner_nft_seeds
             ),
             1, // 1 token
         )?;
 
         msg!("Run create metadata accounts v3");
 
+        let collection_details = Collection {
+            verified: false, // Start as unverified
+            key: self.collection_mint.key(),
+        };
+
         create_metadata_accounts_v3(
             CpiContext::new_with_signer(
                 self.metadata_program.to_account_info(),
                 CreateMetadataAccountsV3 {
                     payer: self.miner.to_account_info(),
-                    mint: self.mint.to_account_info(),
-                    metadata: self.nft_metadata.to_account_info(),
-                    mint_authority: self.nft_program_info.to_account_info(),
-                    update_authority: self.nft_program_info.to_account_info(),
+                    mint: self.miner_nft_mint.to_account_info(),
+                    metadata: self.miner_nft_metadata.to_account_info(),
+                    mint_authority: self.authority.to_account_info(),
+                    update_authority: self.authority.to_account_info(),
                     system_program: self.system_program.to_account_info(),
                     rent: self.rent.to_account_info(),
                 },
-                &[&seeds[..]],
+                // &[&miner_nft_seeds[..]],
+                miner_nft_seeds,
             ),
             DataV2 {
-                name:nft_name,
-                symbol,
+                name:"Bitcoin Hashrate Miner Contract NFT".to_string(), 
+                symbol: "MINENFT".to_string(),
                 uri,
                 seller_fee_basis_points: 0,
                 creators: None,
-                collection: None,
+                collection: Some(collection_details),
                 uses: None,
             },
             true,
@@ -558,34 +571,65 @@ impl<'info> OnboardMiner<'info> {
             None,
         )?;
 
-        msg!("Run create master edition v3");
+        // msg!("Run create master edition v3");
 
-        create_master_edition_v3(
-            CpiContext::new_with_signer(
-                self.metadata_program.to_account_info(),
-                CreateMasterEditionV3 {
-                    edition: self.master_edition_account.to_account_info(),
-                    payer: self.miner.to_account_info(),
-                    mint: self.mint.to_account_info(),
-                    metadata: self.nft_metadata.to_account_info(),
-                    mint_authority: self.nft_program_info.to_account_info(),
-                    update_authority: self.nft_program_info.to_account_info(),
-                    system_program: self.system_program.to_account_info(),
-                    token_program: self.token_program.to_account_info(),
-                    rent: self.rent.to_account_info(),
-                },
-                &[&seeds[..]],
-            ),
-            Some(1),
-        )?;
+        // create_master_edition_v3(
+        //     CpiContext::new_with_signer(
+        //         self.metadata_program.to_account_info(),
+        //         CreateMasterEditionV3 {
+        //             edition: self.master_edition_account.to_account_info(),
+        //             payer: self.miner.to_account_info(),
+        //             mint: self.mint.to_account_info(),
+        //             metadata: self.nft_metadata.to_account_info(),
+        //             mint_authority: self.program_state.to_account_info(),
+        //             update_authority: self.program_state.to_account_info(),
+        //             system_program: self.system_program.to_account_info(),
+        //             token_program: self.token_program.to_account_info(),
+        //             rent: self.rent.to_account_info(),
+        //         },
+        //         &[&seeds[..]],
+        //     ),
+        //     Some(1),
+        // )?;
+
+        verify_sized_collection_item(CpiContext::new(
+            self.metadata_program.to_account_info(),
+            VerifySizedCollectionItem {
+                payer: self.authority.to_account_info(),
+                metadata: self.miner_nft_metadata.to_account_info(),
+                collection_mint: self.collection_mint.to_account_info(),
+                collection_metadata: self.nft_collection_metadata.to_account_info(),
+                collection_master_edition: self.collection_master_edition_account.to_account_info(),
+                collection_authority: self.authority.to_account_info(),
+            },
+        ), None)?;
+
 
         msg!("Minted NFT successfully");
 
         emit!(NftMinted {
-    nft_id: self.nft_program_info.nft_id_counter,
-    mint: self.mint.key(),
+    nft_id: nft_id,
+    mint: self.miner_nft_mint.key(),
     owner: self.miner.key(),
+    collection_mint: self.collection_mint.key(),
+    collection_metadata: self.nft_collection_metadata.key(),
+    collection_master_edition: self.collection_master_edition_account.key(),
+    collection_authority: self.authority.key(),
 });
+
+
+
+mint_to(
+    CpiContext::new(
+        self.token_program.to_account_info(),
+        MintTo {
+            mint: self.bhrt_mint.to_account_info(),
+            to: self.miner_bhrt.to_account_info(),
+            authority: self.authority.to_account_info(),
+        },
+    ),
+    mining_power * 10, // Convert Th/s to tokens: 0.1 Th/s = 1 token, so 1 Th/s = 10 tokens
+)?;
 
 
         Ok(())
