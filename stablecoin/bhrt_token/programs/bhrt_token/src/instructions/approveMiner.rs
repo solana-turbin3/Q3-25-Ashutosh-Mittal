@@ -5,18 +5,20 @@ use anchor_spl::{
 };
 
 use crate::error::NftMintError;
-use crate::state::NFTProgramInfo;
+use crate::state::{ProgramState, MinerInfo};
 
 #[derive(Accounts)]
+#[instruction(miner_to_add: Pubkey)]
 pub struct ApproveMiner<'info> {
+      #[account(mut)]
     pub authority: Signer<'info>,
     #[account(
         mut,
-        seeds = [b"nft_program_info"],
-        bump = nft_program_info.bump,
+        seeds = [b"program_state"],
+        bump = program_state.program_state_bump,
         has_one = authority
     )]
-    pub nft_program_info: Account<'info, NFTProgramInfo>,
+    pub program_state: Account<'info, ProgramState>,
     pub system_program: Program<'info, System>,
 }
 
@@ -24,8 +26,8 @@ impl<'info> ApproveMiner<'info> {
 
     pub fn approve_miner(&mut self, miner_to_add: Pubkey) -> Result<()> {
 
-        require!(!self.nft_program_info.miners.contains(&miner_to_add), NftMintError::MinerAlreadyApproved);
-        self.nft_program_info.miners.push(miner_to_add);
+        require!(!self.program_state.approved_miners.contains(&miner_to_add), NftMintError::MinerAlreadyApproved);
+        self.program_state.approved_miners.push(miner_to_add);
         
         Ok(())
     }

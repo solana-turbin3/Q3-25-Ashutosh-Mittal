@@ -1,31 +1,177 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{
-    associated_token::AssociatedToken, 
-    token_interface::{ Mint, TokenAccount, TransferChecked, TokenInterface, transfer_checked}
+use anchor_spl::metadata::{
+    create_master_edition_v3, create_metadata_accounts_v3, CreateMasterEditionV3,
+    CreateMetadataAccountsV3, Metadata,
 };
+use anchor_spl::{
+    associated_token::AssociatedToken,
+    token_interface::{transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked},
+};
+use mpl_token_metadata::types::DataV2;
 
-// use crate::error::NftMintError;
-use crate::state::NFTProgramInfo;
+use crate::state::{BhrtMetadata, ProgramState};
 
 #[derive(Accounts)]
 pub struct Initialize<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
+
+    // ---- ProgramState ----
     #[account(
         init,
         payer = authority,
-        space = 8 + NFTProgramInfo::INIT_SPACE,
-        seeds = [b"nft_program_info"],
+        space = 8 + ProgramState::INIT_SPACE,
+        seeds = [b"program_state"],
         bump
     )]
-    pub nft_program_info: Account<'info, NFTProgramInfo>,
+    pub program_state: Account<'info, ProgramState>,
+
+    // ---- BHRT ----
+    #[account(
+    init,
+    payer= authority,
+    seeds=[b"BHRT"],
+    bump,
+    mint::decimals= 9,
+    mint::authority = authority,
+    mint::token_program = token_program,
+    extensions::metadata_pointer::authority = authority,
+    extensions::metadata_pointer::metadata_address = bhrt_metadata.key()
+)]
+    pub bhrt_mint: InterfaceAccount<'info, Mint>,
+
+    #[account(
+        init,
+        payer = authority,
+        seeds = [b"bhrt_metadata", authority.key().as_ref()],
+        space = 8 + BhrtMetadata::INIT_SPACE,
+        bump
+    )]
+    pub bhrt_metadata: Account<'info, BhrtMetadata>,
+
+    // ---- Collection NFT ----
+    #[account(
+        init,
+        payer = authority,
+        seeds = [b"collection_mint"],
+        mint::decimals = 0,
+        mint::authority = authority,
+        mint::freeze_authority = authority,
+        mint::token_program = token_program,
+        bump
+    )]
+    pub collection_mint: InterfaceAccount<'info, Mint>,
+
+    #[account(
+        init_if_needed,
+        payer = authority,
+        associated_token::mint = collection_mint,
+        associated_token::authority = authority,
+        associated_token::token_program = token_program
+    )]
+    pub collection_token_account: InterfaceAccount<'info, TokenAccount>,
+
+    pub metadata_program: Program<'info, Metadata>,
+    #[account(
+        mut,
+        seeds = [
+            b"collection_metadata".as_ref(),
+            metadata_program.key().as_ref(),
+            collection_mint.key().as_ref(),
+            b"edition".as_ref(),
+        ],  
+        bump,
+        seeds::program = metadata_program.key()
+      )]
+
+    /// CHECK:
+    pub master_edition_account: UncheckedAccount<'info>,
+    #[account(
+        mut,
+        seeds = [
+            b"collection_metadata".as_ref(),
+            metadata_program.key().as_ref(),
+            collection_mint.key().as_ref(),
+        ],
+        bump,
+        seeds::program = metadata_program.key()
+    )]
+    /// CHECK:
+    pub nft_collection_metadata: UncheckedAccount<'info>,
+    
+
+    // --- Required Programs ---
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub rent: Sysvar<'info, Rent>,
+    pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
 }
 
 impl<'info> Initialize<'info> {
+    pub fn init_authority(&mut self, bump: &InitializeBumps) -> Result<()> {
+        self.program_state.set_inner(ProgramState {
+            nft_id_counter: 0,
+            authority: self.authority.key(),
+            approved_miners: Vec::new(),
+            program_state_bump: bump.program_state,
+            bhrt_mint_bump : bump.bhrt_mint,
+            collection_mint_bump: bump.collection_mint,
+            collection_metadata_bump : bump.nft_collection_metadata
+        });
 
-    pub fn init_authority(&mut self, bump: &InitializeBumps) -> Result<()>{
-        self.nft_program_info.set_inner(NFTProgramInfo { nft_id_counter: 0, authority: self.authority.key(), miners:Vec::new(), bump: bump.nft_program_info });
+        // Create metadata for the collection NFT
+        create_metadata_accounts_v3(
+            CpiContext::new(
+                self.metadata_program.to_account_info(),
+                CreateMetadataAccountsV3 {
+                    metadata: self.nft_collection_metadata.to_account_info(),
+                    mint: self.collection_mint.to_account_info(),
+                    mint_authority: self.authority.to_account_info(),
+                    payer: self.authority.to_account_info(),
+                    update_authority: self.authority.to_account_info(),
+                    system_program: self.system_program.to_account_info(),
+                    rent: self.rent.to_account_info(),
+                },
+            ),
+            DataV2 {
+                name: "Miner Contract NFT Collection".to_string(),
+                symbol: "MINERSNFT".to_string(),
+                uri: "URL_TO_COLLECTION_JSON".to_string(),
+                seller_fee_basis_points: 0,
+                creators: None,
+                collection: None,
+                uses: None,
+            },
+            false,
+            true,
+            None,
+        )?;
+
+        // Create the master edition, officially making it a collection
+        create_master_edition_v3(
+            CpiContext::new(
+                self.metadata_program.to_account_info(),
+                CreateMasterEditionV3 {
+                    edition: self.master_edition_account.to_account_info(),
+                    mint: self.collection_mint.to_account_info(),
+                    update_authority: self.authority.to_account_info(),
+                    mint_authority: self.authority.to_account_info(),
+                    payer: self.authority.to_account_info(),
+                    metadata: self.nft_collection_metadata.to_account_info(),
+                    token_program: self.token_program.to_account_info(),
+                    system_program: self.system_program.to_account_info(),
+                    rent: self.rent.to_account_info(),
+                },
+            ),
+            Some(0),
+        )?;
+
+        let metadata_account = &mut self.bhrt_metadata;
+        metadata_account.collection = self.collection_mint.key();
+        metadata_account.description =
+            "Fungible Hashrate Token BHRT linked to Miner NFT Collection".to_string();
+        metadata_account.symbol = "BHRT".to_string();
+
         Ok(())
-    } 
+    }
 }
