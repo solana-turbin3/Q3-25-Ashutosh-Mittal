@@ -132,7 +132,7 @@ fn turbin3() {
     let system_program = system_program::id();
 
     let signer_pubkey = signer.pubkey();
-    let seeds = &[b"prereqs", signer_pubkey.as_ref()];
+    let seeds: &[&[u8]; 2] = &[b"prereqs", signer_pubkey.as_ref()];
     let (prereq_pda, _bump) = Pubkey::find_program_address(seeds, &turbin3_prereq_program);
 
     let (authority, _bump) =

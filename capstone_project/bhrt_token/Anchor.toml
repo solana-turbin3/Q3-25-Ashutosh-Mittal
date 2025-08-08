@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-bhrt_token = "F8MQK7RcrUisW1p9pwuTa6B5XqM9L3ZrzTec8eWAC6Qa"
+bhrt_token = "AbBt8CJq2PrE9WoDR5iSmJXxuFCGcs7PMKUuZKzVxFDD"
 
 [registry]
 url = "https://api.apr.dev"
@@ -17,3 +17,12 @@ wallet = "~/.config/solana/id.json"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+
+[test]
+startup_wait = 30000
+
+[test.validator]
+# Add this section to clone the Metaplex program for your tests
+url = "https://api.mainnet-beta.solana.com"
+[[test.validator.clone]]
+address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
