@@ -1,6 +1,0 @@
-{
-    "rust-analyzer.linkedProjects": [
-        "./programs/nft_mint_miner/Cargo.toml"
-    ],
-    "rust-analyzer.cargo.target": "bpfel-unknown-unknown"
-}
