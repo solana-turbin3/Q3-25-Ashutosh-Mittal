@@ -156,8 +156,8 @@ impl<'info> Deposit<'info> {
         let cpi_program: AccountInfo<'_> = self.token_program.to_account_info();
 
         let cpi_accounts = TransferChecked {
-            mint , 
             from,
+            mint , 
             to,
             authority: self.user.to_account_info()
         };
