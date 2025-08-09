@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token::{burn, transfer_checked, Burn, Mint, Token, TokenAccount, TransferChecked}, token_interface::TokenInterface,
+    token_interface::{burn, transfer_checked, Burn, Mint, TokenAccount, TokenInterface, TransferChecked},
 };
 use constant_product_curve::ConstantProduct;
 
@@ -115,44 +115,37 @@ pub struct Withdraw<'info> {
 }
 
 impl<'info> Withdraw<'info> {
-    pub fn withdraw(&mut self, amount: u64, min_x: u64, min_y: u64) -> Result<()> {
+    pub fn withdraw(&mut self, amount: u64, min_bhrt: u64, min_usdt: u64) -> Result<()> {
         require!(amount != 0, AmmError::InvalidAmount);
 
-        let (x, y) = match self.mint_lp.supply == 0
-            && self.vault_x.amount == 0
-            && self.vault_y.amount == 0
-        {
-            true => (min_x, min_y),
+        let (bhrt, usdt) = match self.lp_mint.supply == 0 && self.vault_bhrt.amount == 0 && self.vault_usdt.amount == 0 {
+
+            true => (min_bhrt, min_usdt),
             false => {
-                let amounts = ConstantProduct::xy_withdraw_amounts_from_l(
-                    self.vault_x.amount,
-                    self.vault_y.amount,
-                    self.mint_lp.supply,
-                    amount,
-                    6,
-                ).unwrap();
+                let amounts = ConstantProduct::xy_withdraw_amounts_from_l( self.vault_bhrt.amount, self.vault_usdt.amount, self.lp_mint.supply, amount, 6,).unwrap();
                 (amounts.x, amounts.y)
             }
+
         };
 
-        require!(x >= min_x && y >= min_y, AmmError::SlippageExceeded);
+        require!(bhrt >= min_bhrt && usdt >= min_usdt, AmmError::SlippageExceeded);
 
         self.burn_lp_tokens(amount)?;
-        self.withdraw_tokens(x, true)?;
-        self.withdraw_tokens(y, false)
+        self.withdraw_tokens(bhrt, true)?;
+        self.withdraw_tokens(usdt, false)
     }
 
     pub fn burn_lp_tokens(&mut self, amount: u64) -> Result<()> {
         let cpi_program = self.token_program.to_account_info();
         let cpi_accounts = Burn {
-            mint: self.mint_lp.to_account_info(),
-            from: self.user_token_account_lp.to_account_info(),
+            mint: self.lp_mint.to_account_info(),
+            from: self.user_lp.to_account_info(),
             authority: self.user.to_account_info(),
         };
 
         let signer_seeds: &[&[&[u8]]] = &[&[
-            b"config",
-            &[self.config.config_bump],
+            b"amm_config",
+            &[self.amm_config.amm_config_bump],
         ]];
 
         let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer_seeds);
@@ -162,30 +155,31 @@ impl<'info> Withdraw<'info> {
     pub fn withdraw_tokens(&mut self, amount: u64, is_x: bool) -> Result<()> {
         let (from, to, mint, decimals) = match is_x {
             true => (
-                self.vault_x.to_account_info(),
-                self.user_token_account_x.to_account_info(),
-                self.mint_x.to_account_info(),
-                self.mint_x.decimals,
+                self.vault_bhrt.to_account_info(),
+                self.user_bhrt.to_account_info(),
+                self.bhrt_mint.to_account_info(),
+                self.bhrt_mint.decimals,
             ),
             false => (
-                self.vault_y.to_account_info(),
-                self.user_token_account_y.to_account_info(),
-                self.mint_y.to_account_info(),
-                self.mint_y.decimals,
+                self.vault_usdt.to_account_info(),
+                self.user_usdt.to_account_info(),
+                self.udst_mint.to_account_info(),
+                self.udst_mint.decimals,
             ),
         };
 
         let cpi_program = self.token_program.to_account_info();
+        
         let cpi_accounts = TransferChecked {
             from,
             to,
             mint,
-            authority: self.config.to_account_info(),
+            authority: self.amm_config.to_account_info(),
         };
 
         let signer_seeds: &[&[&[u8]]] = &[&[
-            b"config",
-            &[self.config.config_bump],
+            b"amm_config",
+            &[self.amm_config.amm_config_bump],
         ]];
 
         let cpi_context = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer_seeds);

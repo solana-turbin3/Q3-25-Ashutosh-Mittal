@@ -29,4 +29,20 @@ pub mod bhrt_token {
         ctx.accounts.onboard_miner(&ctx.bumps, name, uri, nft_id, mining_power)?;
         Ok(())
     }
+
+    pub fn amm_initialize(ctx: Context<AmmInitialize>, fee: u16) -> Result<()> {
+        ctx.accounts.amm_initialize(fee, ctx.bumps)
+    }
+
+    pub fn amm_deposit(ctx: Context<Deposit>, amount: u64, max_bhrt: u64, max_usdt: u64) -> Result<()> {
+        ctx.accounts.deposit(amount, max_bhrt, max_usdt)
+    }
+
+    pub fn amm_withdraw(ctx: Context<Withdraw>, amount: u64, min_bhrt: u64, min_usdt: u64) -> Result<()> {
+        ctx.accounts.withdraw(amount, min_bhrt, min_usdt)
+    }
+
+    pub fn amm_swap( ctx: Context<Swap>, is_bhrt: bool, amount_in: u64, min_amount_out: u64) -> Result<()> {
+        ctx.accounts.swap(is_bhrt, amount_in, min_amount_out)
+    }
 }

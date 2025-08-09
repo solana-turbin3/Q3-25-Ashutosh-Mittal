@@ -78,7 +78,7 @@ pub struct AmmInitialize<'info> {
 }
 
 impl<'info> AmmInitialize<'info> {
-    pub fn amm_initialize(&mut self, seed: u64, fee: u16, authority: Option<Pubkey>, bumps: AmmInitializeBumps) -> Result<()> {
+    pub fn amm_initialize(&mut self, fee: u16, bumps: AmmInitializeBumps) -> Result<()> {
         self.amm_config.set_inner(AmmConfig { authority: Some(self.authority.key()), bhrt_mint: self.bhrt_mint.key(), udst_mint: self.udst_mint.key(), fee, locked: false, amm_config_bump: bumps.amm_config, lp_bump: bumps.lp_mint });
         Ok(())
     }

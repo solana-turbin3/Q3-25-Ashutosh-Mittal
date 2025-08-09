@@ -118,7 +118,7 @@ pub struct Deposit<'info> {
 
 impl<'info> Deposit<'info> {
 
-        pub fn deposit(&mut self, is_bhrt:bool, amount: u64, max_bhrt: u64, max_usdt:u64) -> Result<()> {
+        pub fn deposit(&mut self, amount: u64, max_bhrt: u64, max_usdt:u64) -> Result<()> {
             require!(self.amm_config.locked == false, AmmError::PoolLocked);
             require!(amount != 0, AmmError::InvalidAmount);
 
