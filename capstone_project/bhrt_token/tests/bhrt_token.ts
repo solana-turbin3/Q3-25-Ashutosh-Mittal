@@ -13,7 +13,9 @@ import { assert } from "chai";
 
 
 describe("bhrt_token", () => {
-  const provider = anchor.getProvider();
+  // const provider = anchor.getProvider();
+  const provider = anchor.AnchorProvider.env();   
+  anchor.setProvider(provider);
   const program = anchor.workspace.BhrtToken as Program<BhrtToken>;
   const programId = program.programId;
   const tokenProgram = spl.TOKEN_2022_PROGRAM_ID;
@@ -56,33 +58,33 @@ describe("bhrt_token", () => {
   //   )
   //   .flat();
 
-  const program_state = PublicKey.findProgramAddressSync(
+  const [program_state, program_state_bump] = PublicKey.findProgramAddressSync(
     [
       Buffer.from("program_state")
     ],
     programId
-  )[0];
+  );
 
-  const bhrt_mint = PublicKey.findProgramAddressSync(
+  const [bhrt_mint, bhrt_mint_bump] = PublicKey.findProgramAddressSync(
     [
       Buffer.from("BHRT")
     ],
     programId
-  )[0];
+  );
 
-  const bhrt_metadata = PublicKey.findProgramAddressSync(
+  const [bhrt_metadata, bhrt_metadata_bump] = PublicKey.findProgramAddressSync(
     [
       Buffer.from("bhrt_metadata"), program_state.toBuffer()
     ],
     programId
-  )[0];
+  );
 
-  const collection_mint = PublicKey.findProgramAddressSync(
+  const [collection_mint, collection_mint_bump] = PublicKey.findProgramAddressSync(
     [
       Buffer.from("collection_mint")
     ],
     programId
-  )[0];
+  );
   // const collectionMintKp = Keypair.generate();
   // const collection_mint = collectionMintKp.publicKey;
 
@@ -118,20 +120,61 @@ describe("bhrt_token", () => {
   // )[0];
 
 
-  const collection_master_edition_account = metaplex.nfts().pdas().masterEdition({ mint: collection_mint  });
-  const nft_collection_metadata = metaplex.nfts().pdas().metadata({ mint: collection_mint });
+  // const collection_master_edition_account = metaplex.nfts().pdas().masterEdition({ mint: collection_mint  });
+  const getMasterEditionAddress = async (mint) => {
+    return (
+      await PublicKey.findProgramAddressSync([
+        Buffer.from("metadata"),
+        metadataProgram.toBuffer(),
+        mint.toBuffer(),
+        Buffer.from("edition"),
+      ],
+      tokenProgram
+    ))[0];
+  };
+
+  const getMetadataAddress = async (mint) => {
+    return (
+      await PublicKey.findProgramAddressSync([
+        Buffer.from("metadata"),
+        metadataProgram.toBuffer(),
+        mint.toBuffer(),
+      ],
+      tokenProgram
+    ))[0];
+  };
+
+  const [collection_master_edition_account, collection_master_edition_account_bump] =  PublicKey.findProgramAddressSync(
+    [
+      Buffer.from("metadata"),
+        metadataProgram.toBuffer(),
+        collection_mint.toBuffer(),
+        Buffer.from("edition"),
+    ],
+    metadataProgram
+  );
+  // const nft_collection_metadata = metaplex.nfts().pdas().metadata({ mint: collection_mint });
+  const [nft_collection_metadata, nft_collection_metadata_bump] =  PublicKey.findProgramAddressSync(
+    [
+      Buffer.from("metadata"),
+        metadataProgram.toBuffer(),
+        collection_mint.toBuffer(),
+    ],
+    metadataProgram
+  );
+
 
   const rent = anchor.web3.SYSVAR_RENT_PUBKEY;
   const system = anchor.web3.SystemProgram.programId;
   const sysvar_instructions= anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY;
 
 
-  const miner_nft_mint = PublicKey.findProgramAddressSync(
+  const [miner_nft_mint, miner_nft_mint_bump] = PublicKey.findProgramAddressSync(
     [
       Buffer.from("nft_mint"), miner.publicKey.toBuffer(), NFT_ID.toArrayLike(Buffer, "le", 8)
     ],
     programId
-  )[0];
+  );
   
   const miner_nft_token_account = spl.getAssociatedTokenAddressSync(
     miner_nft_mint,
@@ -152,12 +195,12 @@ describe("bhrt_token", () => {
 
   const miner_nft_metadata = metaplex.nfts().pdas().metadata({ mint: miner_nft_mint });
 
-  const miner_info = PublicKey.findProgramAddressSync(
+  const [miner_info, miner_info_bump] = PublicKey.findProgramAddressSync(
     [
       Buffer.from("miner"), miner.publicKey.toBuffer()
     ],
     programId
-  )[0];
+  );
 
   const miner_bhrt = spl.getAssociatedTokenAddressSync(
     bhrt_mint,
@@ -167,31 +210,56 @@ describe("bhrt_token", () => {
   );
 
     // --- Airdrops ---
+    // before(async () => {
+    //   await provider.connection.requestAirdrop(authority.publicKey, 10 * LAMPORTS_PER_SOL).then(confirm);
+    //   await provider.connection.requestAirdrop(miner.publicKey, 10 * LAMPORTS_PER_SOL).then(confirm);
+    // });
     before(async () => {
-      await provider.connection.requestAirdrop(authority.publicKey, 10 * LAMPORTS_PER_SOL).then(confirm);
-      await provider.connection.requestAirdrop(miner.publicKey, 10 * LAMPORTS_PER_SOL).then(confirm);
+      const balance = await provider.connection.getBalance(authority.publicKey);
+      if (balance < 1_000_000_000) {
+        console.log("Requesting airdrop for authority...");
+        const signature = await provider.connection.requestAirdrop(authority.publicKey, 2_000_000_000);
+        await provider.connection.confirmTransaction({
+          signature,
+          blockhash: (await provider.connection.getLatestBlockhash()).blockhash,
+          lastValidBlockHeight: (await provider.connection.getLatestBlockhash()).lastValidBlockHeight,
+        });
+      }
     });
-  
   
     // --- Test Cases ---
     it("Initializes the protocol", async () => {
       try {
-  
-      await program.methods.authorityinitialization()
-        .accounts({
+        console.log("authority", JSON.stringify(authority.publicKey));
+        console.log("program_state", JSON.stringify(program_state));
+        console.log("bhrt_mint", JSON.stringify(bhrt_mint));
+        console.log("bhrt_metadata", JSON.stringify(bhrt_metadata));
+        console.log("collection_mint", JSON.stringify(collection_mint));
+        console.log("collection_token_account", JSON.stringify(collection_token_account));
+        console.log("nft_collection_metadata", JSON.stringify(nft_collection_metadata));
+        console.log("collection_master_edition_account", JSON.stringify(collection_master_edition_account));  
+        console.log("metadataProgram", JSON.stringify(metadataProgram));
+        console.log("sysvar_instructions", JSON.stringify(sysvar_instructions));
+        console.log("tokenProgram", JSON.stringify(tokenProgram));
+        console.log("system", JSON.stringify(system));
+        console.log("rent", JSON.stringify(rent));
+        console.log("associatedTokenProgram", JSON.stringify(anchor.utils.token.ASSOCIATED_PROGRAM_ID));
+        
+        await program.methods.authorityinitialization()
+        .accountsPartial({
           authority: authority.publicKey,
           programState: program_state,
           bhrtMint: bhrt_mint,
           bhrtMetadata: bhrt_metadata,
           collectionMint: collection_mint,
           collectionTokenAccount: collection_token_account,
-          nftCollectionMetadata: nft_collection_metadata,
-          collectionMasterEditionAccount: collection_master_edition_account,
+          nftCollectionMetadata:  nft_collection_metadata,
+          collectionMasterEditionAccount:  collection_master_edition_account,
           metadataProgram: new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"),
           instructionSysvar: sysvar_instructions,
           tokenProgram: tokenProgram,
           systemProgram: system,
-          rent: rent,
+          // rent: rent,
           associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
         })
         .signers([authority]) 
@@ -199,6 +267,12 @@ describe("bhrt_token", () => {
         .then(confirm)
         .then(log);
 
+        // await provider.connection.confirmTransaction({
+        //   signature: initialize_authority_tx,
+        //   blockhash: (await provider.connection.getLatestBlockhash()).blockhash,
+        //   lastValidBlockHeight: (await provider.connection.getLatestBlockhash()).lastValidBlockHeight,
+        // });
+        // await new Promise(resolve => setTimeout(resolve, 2000));
 
     } catch (error) {
       // --- This is the error handling block ---

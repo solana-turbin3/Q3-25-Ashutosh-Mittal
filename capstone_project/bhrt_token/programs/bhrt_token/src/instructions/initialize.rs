@@ -43,6 +43,15 @@ pub struct Initialize<'info> {
 
     #[account(
         init,
+        payer= authority,
+        associated_token::mint=bhrt_mint,
+        associated_token::authority=program_state,
+        associated_token::token_program = token_program
+    )]
+    pub bhrt_token_account: InterfaceAccount<'info, TokenAccount>,
+
+    #[account(
+        init,
         payer = authority,
         seeds = [b"bhrt_metadata", program_state.key().as_ref()],
         space = 8 + BhrtMetadata::INIT_SPACE,
@@ -64,7 +73,7 @@ pub struct Initialize<'info> {
     pub collection_mint: InterfaceAccount<'info, Mint>,
 
     #[account(
-        init_if_needed,
+        init,
         payer = authority,
         associated_token::mint = collection_mint,
         associated_token::authority = program_state,
@@ -108,7 +117,7 @@ pub struct Initialize<'info> {
 
     // --- Required Programs ---
     pub associated_token_program: Program<'info, AssociatedToken>,
-    pub rent: Sysvar<'info, Rent>,
+    // pub rent: Sysvar<'info, Rent>,
     pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
     
@@ -180,26 +189,28 @@ impl<'info> Initialize<'info> {
         //     Some(0),
         // )?;
 
-        let create_v1_cpi = CreateV1CpiBuilder::new(&self.metadata_program.to_account_info())
+        CreateV1CpiBuilder::new(&self.metadata_program.to_account_info())
             .metadata(&self.nft_collection_metadata.to_account_info())
-            .master_edition(Some(&self.collection_master_edition_account.to_account_info()))
             .mint(&self.collection_mint.to_account_info(), true)
             .authority(&self.program_state.to_account_info())
             .payer(&self.authority.to_account_info())
             .update_authority(&self.program_state.to_account_info(), true)
+            .master_edition(Some(&self.collection_master_edition_account.to_account_info()))
             .system_program(&self.system_program.to_account_info())
             .sysvar_instructions(&self.instruction_sysvar.to_account_info())
             .spl_token_program(Some(&self.token_program.to_account_info()))
+            .token_standard(TokenStandard::NonFungible)
             .name("Miner Contract NFT Collection".to_string())
             .symbol("MINERSNFT".to_string())
             .uri(" https://gateway.irys.xyz/3ZUd1gbTBK81MnGjvTARBcyVUS3VzAiaq39DhJ9yyU9i".to_string())
             .seller_fee_basis_points(0)
             .primary_sale_happened(false)
-            .is_mutable(true) .collection_details(mpl_token_metadata::types::CollectionDetails::V1 { size: 0 })
-            .token_standard(TokenStandard::NonFungible)
-            .print_supply(PrintSupply::Zero).invoke_signed(signer_seeds)?;
+            .is_mutable(true) 
+            .print_supply(PrintSupply::Zero)
+            // .collection_details(mpl_token_metadata::types::CollectionDetails::V1 { size: 0 })
+            .invoke_signed(signer_seeds)?;
 
-            let mut mint_collection_cpi = MintV1CpiBuilder::new(&self.metadata_program.to_account_info())
+           MintV1CpiBuilder::new(&self.metadata_program.to_account_info())
                 .token(&self.collection_token_account.to_account_info())
                 .token_owner(Some(&self.program_state.to_account_info()))
                 .metadata(&self.nft_collection_metadata.to_account_info())
