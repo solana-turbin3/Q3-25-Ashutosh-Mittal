@@ -1,105 +1,162 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token::{mint_to, transfer, transfer_checked, Mint, MintTo, Token, TokenAccount, Transfer, TransferChecked},
+    token_interface::{mint_to, transfer_checked, Mint, MintTo, TokenAccount, TokenInterface, Transfer, TransferChecked},
 };
 use constant_product_curve::ConstantProduct;
 
-use crate::{state::Config, error::AmmError};
+use crate::state::{AmmConfig, ProgramState};
+use crate::error::AmmError;
 
 #[derive(Accounts)]
 // #[instruction(seed: u64)]
 pub struct Deposit<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
-    pub mint_x: Account<'info, Mint>,
-    pub mint_y: Account<'info, Mint>,
- #[account(
-    // mut,
-    has_one = mint_x,
-    has_one = mint_y,
-    seeds=[b"config",  config.seed.to_le_bytes().as_ref()],
-    bump= config.config_bump
-)]
-    pub config: Account<'info, Config>,
 
+    #[account(mut)]
+    /// CHECK: This is safe account 
+      pub authority: SystemAccount<'info>,
+
+    // ---- ProgramState ----
+    #[account(
+        mut,
+        seeds = [b"program_state"],
+        bump = program_state.program_state_bump,
+        has_one = authority
+    )]
+    pub program_state: Account<'info, ProgramState>,
+
+   // ---- AmmConfig ----
+    #[account(
+        mut,
+        seeds=[b"amm_config", program_state.key().as_ref()],
+        bump, 
+        has_one = bhrt_mint,
+        has_one = udst_mint
+    )]
+    pub amm_config: Account<'info, AmmConfig>,
+
+    // ----------------------------- Mints -----------------------------------
+    // ---- BHRT Mint ----
+    #[account(
+        mut,
+        seeds=[b"BHRT"],
+        bump = program_state.bhrt_mint_bump,
+        mint::token_program = token_program
+    )]
+    pub bhrt_mint: InterfaceAccount<'info, Mint>,
+
+    // ---- USDT Mint ----
+    #[account(
+        mint::token_program = token_program
+    )]
+    pub udst_mint: InterfaceAccount<'info, Mint>,
+
+    // ---- LP Mint ----
+    #[account(
+        mut,
+        seeds=[b"lp", amm_config.key().as_ref() ],
+        bump =  amm_config.lp_bump,
+        mint::token_program = token_program
+        )]
+        pub lp_mint: InterfaceAccount<'info, Mint>,
+
+    // ----------------------------- Program Vaults ----------------------------
+    // ---- Vault BHRT ----
      #[account(
         mut,
-        associated_token::mint=mint_x,
-        associated_token::authority=config
+        associated_token::mint=bhrt_mint,
+        associated_token::authority=amm_config,
+        associated_token::token_program = token_program
     )]
-    pub vault_x: Account<'info, TokenAccount>,
+    pub vault_bhrt: InterfaceAccount<'info, TokenAccount>,
 
+    // ---- Vault USDT ----
     #[account(
         mut,
-        associated_token::mint=mint_x,
-        associated_token::authority=config
+        associated_token::mint=udst_mint,
+        associated_token::authority=amm_config,
+        associated_token::token_program = token_program
     )]
-    pub vault_y: Account<'info, TokenAccount>,
+    pub vault_usdt: InterfaceAccount<'info, TokenAccount>,
 
-    #[account(
-    mut,
-    seeds=[b"lp", config.key().as_ref() ],
-    bump =  config.lp_bump,
-   
-)]
-    pub mint_lp: Account<'info, Mint>,
- #[account(
-        mut,
-        associated_token::mint=mint_x,
-        associated_token::authority=user
-    )]
-    pub user_x: Account<'info, TokenAccount>,
-
+    // ----------------------------- User Vaults ---------------------------------
+    // ---- User BHRT ----
     #[account(
         mut,
-        associated_token::mint=mint_x,
-        associated_token::authority=user
+        associated_token::mint=bhrt_mint,
+        associated_token::authority=user,
+        associated_token::token_program = token_program
     )]
-    pub user_y: Account<'info, TokenAccount>,
+    pub user_bhrt: InterfaceAccount<'info, TokenAccount>,
 
+    // ---- User USDT ----
+    #[account(
+        mut,
+        associated_token::mint=udst_mint,
+        associated_token::authority=user,
+        associated_token::token_program = token_program
+    )]
+    pub user_usdt: InterfaceAccount<'info, TokenAccount>,
+
+    // ---- User LP ----
     #[account(
         init_if_needed,
         payer= user,
-        associated_token::mint=mint_lp,
-        associated_token::authority=user
+        associated_token::mint=lp_mint,
+        associated_token::authority=user,
+        associated_token::token_program = token_program
     )]
-    pub user_lp: Account<'info, TokenAccount>,
-    pub token_program: Program<'info, Token>,
+    pub user_lp: InterfaceAccount<'info, TokenAccount>,
+
+    // ---- Required Programs ----
+    pub token_program: Interface<'info, TokenInterface>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
 }
 
 impl<'info> Deposit<'info> {
 
-        pub fn deposit(&mut self, is_x:bool, amount: u64, max_x: u64, max_y:u64) -> Result<()> {
-            require!(self.config.locked == false, AmmError::PoolLocked);
+        pub fn deposit(&mut self, is_bhrt:bool, amount: u64, max_bhrt: u64, max_usdt:u64) -> Result<()> {
+            require!(self.amm_config.locked == false, AmmError::PoolLocked);
             require!(amount != 0, AmmError::InvalidAmount);
 
-            let(x,y)= match self.mint_lp.supply == 0 && self.vault_x.amount == 0 && self.vault_y.amount == 0 {
-                true => (max_x, max_y),
+            let(bhrt,usdt)= match self.lp_mint.supply == 0 && self.vault_bhrt.amount == 0 && self.vault_usdt.amount == 0 {
+                true => (max_bhrt, max_usdt),
                 false => {
-                    let amount = ConstantProduct::xy_deposit_amounts_from_l( self.vault_x.amount, self.vault_y.amount,  self.mint_lp.supply,  amount,  6).unwrap();
+                    let amount = ConstantProduct::xy_deposit_amounts_from_l( self.vault_bhrt.amount, self.vault_usdt.amount,  self.lp_mint.supply,  amount,  6).unwrap();
                     (amount.x, amount.y)
                 }
             };
 
-            require!(x<=max_x && y <= max_y, AmmError::SlippageExceeded);
+            require!(bhrt<=max_bhrt && usdt <= max_usdt, AmmError::SlippageExceeded);
 
-            self.deposit_tokens(true, x);
-            self.deposit_tokens(false, y);
+            self.deposit_tokens(true, bhrt);
+            self.deposit_tokens(false, usdt);
             self.mint_lp_token(amount)
         }
 
-    pub fn deposit_tokens(&mut self, is_x:bool, amount: u64) -> Result<()> {
-        let (from, to) = match is_x{                 // from =user x   , to = vault x     (and vice versa)
-            true => (self.user_x.to_account_info(), self.vault_x.to_account_info()),
-                        false => (self.user_y.to_account_info(), self.vault_y.to_account_info()),
+    pub fn deposit_tokens(&mut self, is_bhrt:bool, amount: u64) -> Result<()> {
+        let (from, to) = match is_bhrt{                 // from =user x   , to = vault x     (and vice versa)
+            true => (self.user_bhrt.to_account_info(), self.vault_bhrt.to_account_info()),
+                        false => (self.user_usdt.to_account_info(), self.vault_usdt.to_account_info()),
         };
+
+        let decimals: u8;
+        let mint: AccountInfo<'_>;
+        if is_bhrt{
+             decimals = self.bhrt_mint.decimals;
+             mint = self.bhrt_mint.to_account_info();
+        } else {
+             decimals = self.udst_mint.decimals;
+             mint = self.udst_mint.to_account_info();
+        }
 
         let cpi_program: AccountInfo<'_> = self.token_program.to_account_info();
 
-        let cpi_accounts = Transfer {
+        let cpi_accounts = TransferChecked {
+            mint , 
             from,
             to,
             authority: self.user.to_account_info()
@@ -107,23 +164,23 @@ impl<'info> Deposit<'info> {
 
         let ctx = CpiContext::new(cpi_program, cpi_accounts);
 
-        transfer(ctx, amount)
+        transfer_checked(ctx, amount, decimals)
     }
 
     pub fn mint_lp_token(&mut self,amount: u64) -> Result<()> {
 
         let cpi_program: AccountInfo<'_> = self.token_program.to_account_info();
          let cpi_accounts = MintTo {
-            mint: self.mint_lp.to_account_info(),
+            mint: self.lp_mint.to_account_info(),
             to: self.user.to_account_info(),
-            authority: self.config.to_account_info()
+            authority: self.amm_config.to_account_info()
         };
 
-        let seeds = &[&b"config"[..], &self.config.seed.to_be_bytes(), &[self.config.config_bump]];
+        let seeds = &[&b"amm_config"[..], &self.amm_config.key().to_bytes(), &[self.amm_config.amm_config_bump]];
         let signer_seed = &[&seeds[..]];
-                let ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer_seed);
+        let ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer_seed);
 
-                mint_to(ctx, amount)
+        mint_to(ctx, amount)
 
     }
 

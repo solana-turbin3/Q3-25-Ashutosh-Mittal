@@ -5,7 +5,7 @@ use anchor_spl::{
 };
 use constant_product_curve::ConstantProduct;
 
-use crate::{state::Config, error::AmmError};
+use crate::{state::{AmmConfig}, error::AmmError};
 
 #[derive(Accounts)]
 // #[instruction(seed: u64)]

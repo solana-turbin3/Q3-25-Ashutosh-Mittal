@@ -1,10 +1,10 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token::{transfer_checked, Mint, Token, TokenAccount, TransferChecked},
+    token_interface::{Mint, TokenAccount, TokenInterface},
 };
 
-use crate::state::ProgramState;
+use crate::state::{ProgramState, AmmConfig};
 
 #[derive(Accounts)]
 // #[instruction(seed: u64)]
@@ -21,9 +21,19 @@ pub struct AmmInitialize<'info> {
     pub program_state: Account<'info, ProgramState>,
 
     #[account(
+        init,
+        payer= authority,
+        seeds=[b"amm_config", program_state.key().as_ref()],
+        space= 8+ AmmConfig::INIT_SPACE,
+        bump
+    )]
+    pub amm_config: Account<'info, AmmConfig>,
+
+    #[account(
         mut,
         seeds=[b"BHRT"],
         bump = program_state.bhrt_mint_bump,
+        mint::token_program = token_program
     )]
     pub bhrt_mint: InterfaceAccount<'info, Mint>,
 
@@ -35,20 +45,20 @@ pub struct AmmInitialize<'info> {
     #[account(
     init,
     payer= authority,
-    seeds=[b"lp", program_state.key().as_ref() ],
+    seeds=[b"lp", amm_config.key().as_ref() ],
     bump,
     mint::decimals= 6,
-    mint::authority=config,
+    mint::authority= amm_config,
     mint::token_program = token_program,
 )]
-    pub mint_lp: InterfaceAccount<'info, Mint>,
+    pub lp_mint: InterfaceAccount<'info, Mint>,
 
 
     #[account(
         init,
         payer= authority,
         associated_token::mint= bhrt_mint,
-        associated_token::authority= program_state,
+        associated_token::authority=  amm_config,
         associated_token::token_program = token_program
     )]
     pub vault_bhrt: InterfaceAccount<'info, TokenAccount>,
@@ -56,20 +66,20 @@ pub struct AmmInitialize<'info> {
     #[account(
         init,
         payer= authority,
-        associated_token::mint= usdt_mint,
-        associated_token::authority= program_state,
+        associated_token::mint= udst_mint,
+        associated_token::authority=  amm_config,
         associated_token::token_program = token_program
     )]
     pub vault_usdt: InterfaceAccount<'info, TokenAccount>,
 
-    pub token_program: Program<'info, Token>,
+    pub token_program: Interface<'info, TokenInterface>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
 }
 
 impl<'info> AmmInitialize<'info> {
-    pub fn initialize(&mut self, seed: u64, fee: u16, authority: Option<Pubkey>, bumps: InitializeBumps) -> Result<()> {
-        self.config.set_inner(Config { seed, authority, mint_x: self.mint_x.key(), mint_y: self.mint_y.key(), fee, locked: false, config_bump: bumps.config, lp_bump: bumps.mint_lp });
+    pub fn amm_initialize(&mut self, seed: u64, fee: u16, authority: Option<Pubkey>, bumps: AmmInitializeBumps) -> Result<()> {
+        self.amm_config.set_inner(AmmConfig { authority: Some(self.authority.key()), bhrt_mint: self.bhrt_mint.key(), udst_mint: self.udst_mint.key(), fee, locked: false, amm_config_bump: bumps.amm_config, lp_bump: bumps.lp_mint });
         Ok(())
     }
 }

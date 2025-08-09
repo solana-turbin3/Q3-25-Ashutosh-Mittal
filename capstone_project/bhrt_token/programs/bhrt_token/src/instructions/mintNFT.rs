@@ -34,7 +34,8 @@ pub struct OnboardMiner<'info> {
      #[account(
         mut,
         seeds = [b"collection_mint"],
-        bump = program_state.collection_mint_bump
+        bump = program_state.collection_mint_bump,
+        mint::token_program = token_program
     )]
     pub collection_mint: InterfaceAccount<'info, Mint>,
 
@@ -138,6 +139,7 @@ pub metadata_program: Program<'info, Metadata>,
     mut,
     seeds=[b"BHRT"],
     bump = program_state.bhrt_mint_bump,
+    mint::token_program = token_program
 )]
     pub bhrt_mint: InterfaceAccount<'info, Mint>,
 
@@ -145,7 +147,8 @@ pub metadata_program: Program<'info, Metadata>,
         init,
         payer= miner,
         associated_token::mint= bhrt_mint,
-        associated_token::authority=miner
+        associated_token::authority=miner,
+        associated_token::token_program = token_program
     )]
     pub miner_bhrt: InterfaceAccount<'info, TokenAccount>,
 
@@ -161,7 +164,6 @@ pub metadata_program: Program<'info, Metadata>,
     pub system_program: Program<'info, System>,
     pub token_program: Interface<'info, TokenInterface>,
 }
-
 
 
 

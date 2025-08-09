@@ -10,7 +10,20 @@ pub struct ProgramState {
     pub program_state_bump: u8,
     pub bhrt_mint_bump: u8,
     pub collection_mint_bump: u8,
-    pub collection_metadata_bump: u8
+    pub collection_metadata_bump: u8,
+    // pub lp_mint_bump: u8,
+}
+
+#[account]
+#[derive(InitSpace)]
+pub struct AmmConfig{
+    pub authority: Option<Pubkey>,
+    pub bhrt_mint: Pubkey,
+    pub udst_mint: Pubkey,
+    pub fee: u16,
+    pub locked: bool,
+    pub amm_config_bump: u8,
+    pub lp_bump: u8,
 }
 
 #[account]
@@ -28,19 +41,6 @@ pub struct MinerInfo {
 
 #[account]
 #[derive(InitSpace)]
-pub struct AmmConfig {
-    pub seed: u64,
-    pub authority: Option<Pubkey>,
-    pub mint_x: Pubkey,
-    pub mint_y: Pubkey,
-    pub fee_basis_points: u16,
-    pub locked: bool,
-    pub config_bump: u8,
-    pub lp_bump: u8,
-}
-
-#[account]
-#[derive(InitSpace)]
 pub struct BhrtMetadata {
     pub mint: Pubkey,
     pub collection: Pubkey, // This field points to the Collection NFT's Mint address
@@ -49,3 +49,4 @@ pub struct BhrtMetadata {
     #[max_len(10)]
     pub symbol: String,
 }
+

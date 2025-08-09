@@ -41,14 +41,14 @@ pub struct Initialize<'info> {
 )]
     pub bhrt_mint: InterfaceAccount<'info, Mint>,
 
-    #[account(
-        init,
-        payer= authority,
-        associated_token::mint=bhrt_mint,
-        associated_token::authority=program_state,
-        associated_token::token_program = token_program
-    )]
-    pub bhrt_token_account: InterfaceAccount<'info, TokenAccount>,
+    // #[account(
+    //     init,
+    //     payer= authority,
+    //     associated_token::mint=bhrt_mint,
+    //     associated_token::authority=program_state,
+    //     associated_token::token_program = token_program
+    // )]
+    // pub bhrt_token_account: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         init,
@@ -115,6 +115,7 @@ pub struct Initialize<'info> {
     /// CHECK: This is the instructions sysvar
         pub instruction_sysvar: AccountInfo<'info>,
 
+
     // --- Required Programs ---
     pub associated_token_program: Program<'info, AssociatedToken>,
     // pub rent: Sysvar<'info, Rent>,
@@ -132,11 +133,11 @@ impl<'info> Initialize<'info> {
             program_state_bump: bump.program_state,
             bhrt_mint_bump : bump.bhrt_mint,
             collection_mint_bump: bump.collection_mint,
-            collection_metadata_bump : bump.nft_collection_metadata
+            collection_metadata_bump : bump.nft_collection_metadata,
         });
 
         let state_seeds = &[
-            b"program_state".as_ref(),
+            &b"program_state"[..],
             &[bump.program_state]
         ];
         let signer_seeds = &[&state_seeds[..]];
