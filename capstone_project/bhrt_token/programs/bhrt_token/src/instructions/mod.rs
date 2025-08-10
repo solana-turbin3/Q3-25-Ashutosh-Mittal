@@ -2,7 +2,9 @@ pub mod initialize;
 pub mod approveMiner;
 pub mod onBoardMiner;
 pub mod amm;
+pub mod revoke;
 
+pub use revoke::*;
 pub use amm::*;
 pub use onBoardMiner::*;
 pub use approveMiner::*;

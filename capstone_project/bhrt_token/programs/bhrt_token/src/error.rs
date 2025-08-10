@@ -24,7 +24,13 @@ pub enum AmmError {
     #[msg("Pool is locked")]
     PoolLocked,
     #[msg("Fee exceeds maximum allowed")]
-    InvalidFee,
+    InvalidFee
+}
+
+#[error_code]
+pub enum RevokeMinerParticipationError {
+    #[msg("Insufficient BHRT amount")]
+    InsufficientBhrAmount,
 }
 
 impl From<CurveError> for AmmError {

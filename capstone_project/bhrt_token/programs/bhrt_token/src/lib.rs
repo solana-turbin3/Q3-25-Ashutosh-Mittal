@@ -45,4 +45,8 @@ pub mod bhrt_token {
     pub fn amm_swap( ctx: Context<Swap>, is_bhrt: bool, amount_in: u64, min_amount_out: u64) -> Result<()> {
         ctx.accounts.swap(is_bhrt, amount_in, min_amount_out)
     }
+
+    pub fn revoke_miner_participation(ctx: Context<RevokeMinerParticipation>, amount: u64) -> Result<()> {
+        ctx.accounts.revoke_miner_participation(&ctx.bumps, amount)
+    }
 }

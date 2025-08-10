@@ -136,11 +136,16 @@ impl<'info> Initialize<'info> {
             collection_metadata_bump : bump.nft_collection_metadata,
         });
 
-        let state_seeds = &[
-            &b"program_state"[..],
-            &[bump.program_state]
-        ];
-        let signer_seeds = &[&state_seeds[..]];
+        // let state_seeds = &[
+        //     b"program_state".as_ref(),
+        //     &[bump.program_state]
+        // ];
+        // let signer_seeds = &[&state_seeds[..]];
+
+        let signers_seeds: &[&[&[u8]]] = &[&[
+            b"program_state",
+            &[bump.program_state],
+        ]]; 
 
         // // Create metadata for the collection NFT
         // create_metadata_accounts_v3(
@@ -209,7 +214,7 @@ impl<'info> Initialize<'info> {
             .is_mutable(true) 
             .print_supply(PrintSupply::Zero)
             // .collection_details(mpl_token_metadata::types::CollectionDetails::V1 { size: 0 })
-            .invoke_signed(signer_seeds)?;
+            .invoke_signed(signers_seeds)?;
 
            MintV1CpiBuilder::new(&self.metadata_program.to_account_info())
                 .token(&self.collection_token_account.to_account_info())
@@ -223,7 +228,7 @@ impl<'info> Initialize<'info> {
                 .spl_token_program(&self.token_program.to_account_info())
                 .spl_ata_program(&self.associated_token_program.to_account_info())
                 .sysvar_instructions(&self.instruction_sysvar.to_account_info())
-                .amount(1).invoke_signed(signer_seeds)?;
+                .amount(1).invoke_signed(signers_seeds)?;
             
             
 

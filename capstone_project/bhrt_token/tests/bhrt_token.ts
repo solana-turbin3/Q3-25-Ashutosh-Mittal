@@ -42,8 +42,8 @@ describe("bhrt_token", () => {
 
   const authority = Keypair.generate();
   const miner = Keypair.generate();
-  const mintA = Keypair.generate();
-  const mintB = Keypair.generate();
+  // const mintA = Keypair.generate();
+  // const mintB = Keypair.generate();
     
   // const [authority_ata_bhrt, miner_ata_bhrt, takerAtaA, takerAtaB] = [authority, miner]
   //   .map((a) =>
