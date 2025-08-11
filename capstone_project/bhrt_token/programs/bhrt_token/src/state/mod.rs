@@ -44,7 +44,7 @@ pub struct MinerInfo {
 pub struct BhrtMetadata {
     pub mint: Pubkey,
     pub collection: Pubkey, // This field points to the Collection NFT's Mint address
-    #[max_len(50)]
+    #[max_len(500)]
     pub description: String,
     #[max_len(10)]
     pub symbol: String,

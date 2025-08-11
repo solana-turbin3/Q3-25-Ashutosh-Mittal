@@ -15,7 +15,7 @@ declare_id!("CCLDZoaXu8EchMrVdVHokdyhBUGgHWBVguMibawESYJj");
 pub mod stablecoin {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        initialize::handler(ctx)
+    pub fn initialize_config_and_vault(ctx: Context<InitializeVault>, uri: String) -> Result<()> {
+        ctx.accounts.initialize_config_and_vault(ctx.bumps, uri)
     }
 }

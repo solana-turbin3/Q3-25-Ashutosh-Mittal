@@ -18,11 +18,15 @@ wallet = "~/.config/solana/id.json"
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
 
-[test]
-startup_wait = 30000
+# [test]
+# startup_wait = 30000
 
-[test.validator]
-# Add this section to clone the Metaplex program for your tests
-url = "https://api.mainnet-beta.solana.com"
-[[test.validator.clone]]
-address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+# [test.validator]
+# # Add this section to clone the Metaplex program for your tests
+# url = "https://api.mainnet-beta.solana.com"
+# [[test.validator.clone]]
+# address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+
+[[test.genesis]]
+address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"  
+program = "tests/metaplex_token_metadata_program.so"

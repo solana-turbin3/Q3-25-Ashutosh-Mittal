@@ -197,7 +197,7 @@ impl<'info> Initialize<'info> {
 
         CreateV1CpiBuilder::new(&self.metadata_program.to_account_info())
             .metadata(&self.nft_collection_metadata.to_account_info())
-            .mint(&self.collection_mint.to_account_info(), true)
+            .mint(&self.collection_mint.to_account_info(), false)
             .authority(&self.program_state.to_account_info())
             .payer(&self.authority.to_account_info())
             .update_authority(&self.program_state.to_account_info(), true)
