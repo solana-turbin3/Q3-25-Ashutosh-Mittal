@@ -277,7 +277,7 @@ let signer_seeds = &[&state_seeds[..]];
         msg!("Creating NFT metadata");
          CreateV1CpiBuilder::new(&self.metadata_program.to_account_info())
             .metadata(&self.miner_nft_metadata.to_account_info())
-            .mint(&self.miner_nft_mint.to_account_info(), true)
+            .mint(&self.miner_nft_mint.to_account_info(), false)
             .authority(&self.program_state.to_account_info())
             .payer(&self.miner.to_account_info())
             .update_authority(&self.program_state.to_account_info(), true)

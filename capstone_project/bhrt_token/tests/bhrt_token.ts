@@ -227,81 +227,66 @@ describe("bhrt_token", () => {
       }
     });
   
-    // --- Test Cases ---
     it("Initializes the protocol", async () => {
       try {
+        // Log all account addresses
         console.log("authority", JSON.stringify(authority.publicKey));
         console.log("program_state", JSON.stringify(program_state));
-        console.log("bhrt_mint", JSON.stringify(bhrt_mint));
-        console.log("bhrt_metadata", JSON.stringify(bhrt_metadata));
-        console.log("collection_mint", JSON.stringify(collection_mint));
-        console.log("collection_token_account", JSON.stringify(collection_token_account));
-        console.log("nft_collection_metadata", JSON.stringify(nft_collection_metadata));
-        console.log("collection_master_edition_account", JSON.stringify(collection_master_edition_account));  
-        console.log("metadataProgram", JSON.stringify(metadataProgram));
-        console.log("sysvar_instructions", JSON.stringify(sysvar_instructions));
-        console.log("tokenProgram", JSON.stringify(tokenProgram));
-        console.log("system", JSON.stringify(system));
-        console.log("rent", JSON.stringify(rent));
-        console.log("associatedTokenProgram", JSON.stringify(anchor.utils.token.ASSOCIATED_PROGRAM_ID));
-        
+        // ... all your other console.log statements ...
+  
+        // Execute the transaction
         await program.methods.authorityinitialization()
-        .accountsPartial({
-          authority: authority.publicKey,
-          programState: program_state,
-          bhrtMint: bhrt_mint,
-          bhrtMetadata: bhrt_metadata,
-          collectionMint: collection_mint,
-          collectionTokenAccount: collection_token_account,
-          nftCollectionMetadata:  nft_collection_metadata,
-          collectionMasterEditionAccount:  collection_master_edition_account,
-          metadataProgram: new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"),
-          instructionSysvar: sysvar_instructions,
-          tokenProgram: tokenProgram,
-          systemProgram: system,
-          // rent: rent,
-          associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
-        })
-        .signers([authority]) 
-        .rpc()
-        .then(confirm)
-        .then(log);
-
-        // await provider.connection.confirmTransaction({
-        //   signature: initialize_authority_tx,
-        //   blockhash: (await provider.connection.getLatestBlockhash()).blockhash,
-        //   lastValidBlockHeight: (await provider.connection.getLatestBlockhash()).lastValidBlockHeight,
-        // });
-        // await new Promise(resolve => setTimeout(resolve, 2000));
-
-    } catch (error) {
-      // --- This is the error handling block ---
-      console.error("Transaction failed!");
-
-      // Check if the error has logs and print them
-      if (error.logs) {
-        console.error("Full logs:");
-        for (const log of error.logs) {
-          console.log(`- ${log}`);
+          .accountsPartial({
+            authority: authority.publicKey,
+            programState: program_state,
+            bhrtMint: bhrt_mint,
+            bhrtMetadata: bhrt_metadata,
+            collectionMint: collection_mint,
+            collectionTokenAccount: collection_token_account,
+            nftCollectionMetadata: nft_collection_metadata,
+            collectionMasterEditionAccount: collection_master_edition_account,
+            metadataProgram: new PublicKey("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"),
+            instructionSysvar: sysvar_instructions,
+            tokenProgram: tokenProgram,
+            systemProgram: system,
+            associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+          })
+          .signers([authority]) 
+          .rpc()
+          .then(confirm)
+          .then(log);
+  
+        // Add logging to verify execution
+        console.log("🔍 Verifying program state...");
+        const programState = await program.account.programState.fetch(program_state);
+        assert.ok(programState.authority.equals(authority.publicKey), "Authority mismatch");
+        assert.equal(programState.nftIdCounter.toNumber(), 0, "Initial NFT counter should be 0");
+        console.log("✅ Program state assertions passed");
+  
+        console.log("🔍 Verifying BHRT metadata...");
+        const bhrtMetadata = await program.account.bhrtMetadata.fetch(bhrt_metadata);
+        assert.ok(bhrtMetadata.collection.equals(collection_mint), "BHRT metadata collection link mismatch");
+        assert.ok(bhrtMetadata.mint.equals(bhrt_mint), "BHRT metadata mint link mismatch");
+        console.log("✅ BHRT metadata assertions passed");
+        
+      } catch (error) {
+        console.error("Transaction failed!");
+        if (error.logs) {
+          console.error("Full logs:");
+          for (const log of error.logs) {
+            console.log(`- ${log}`);
+          }
+        } else {
+          console.error(error);
         }
-      } else {
-        // If it's another type of error, print the whole thing
-        console.error(error);
+        throw error;
       }
-
-      // Re-throw the error to make sure the test still fails
-      throw error;
-    }
-  
-      // Assertions
-      const programState = await program.account.programState.fetch(program_state);
-      assert.ok(programState.authority.equals(authority.publicKey), "Authority mismatch");
-      assert.equal(programState.nftIdCounter.toNumber(), 0, "Initial NFT counter should be 0");
-  
-      const bhrtMetadata = await program.account.bhrtMetadata.fetch(bhrt_metadata);
-      assert.ok(bhrtMetadata.collection.equals(collection_mint), "BHRT metadata collection link mismatch");
-      assert.ok(bhrtMetadata.mint.equals(bhrt_mint), "BHRT metadata mint link mismatch");
     });
+  
+    // Remove the duplicate it() block
   });
+    
+  //   });
+  // });
 
 
