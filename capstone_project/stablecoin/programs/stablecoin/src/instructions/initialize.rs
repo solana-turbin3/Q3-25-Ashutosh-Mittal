@@ -2,12 +2,11 @@ use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
     token_interface::{
-        token_metadata_initialize, transfer_checked, Mint, TokenAccount, TokenInterface,
-        TokenMetadataInitialize, TransferChecked,
+        token_metadata_initialize, Mint, TokenAccount, TokenInterface, TokenMetadataInitialize,
     },
 };
 
-use crate::state::StablecoinConfig;
+use crate::{state::StablecoinConfig, PriceFeed};
 
 #[derive(Accounts)]
 pub struct InitializeVault<'info> {
@@ -26,7 +25,7 @@ pub struct InitializeVault<'info> {
     #[account(
         init,
         payer= admin,
-        seeds=[b"BHRT"],
+        seeds=[b"HST"],
         bump,
         mint::decimals= 6,
         mint::authority = stablecoin_config,
@@ -54,7 +53,16 @@ pub struct InitializeVault<'info> {
             token::authority = stablecoin_config,
             bump
         )]
-    bhrt_collateral_vault: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub bhrt_collateral_vault: Box<InterfaceAccount<'info, TokenAccount>>,
+
+    #[account(
+        init,
+        payer = admin,
+        seeds = [b"bhrt_price_oracle"],
+        space = 8 + PriceFeed::INIT_SPACE,
+        bump
+    )]
+    pub bhrt_price_oracle: Account<'info, PriceFeed>,
 
     pub token_program: Interface<'info, TokenInterface>,
     pub associated_token_program: Program<'info, AssociatedToken>,
@@ -62,7 +70,11 @@ pub struct InitializeVault<'info> {
 }
 
 impl<'info> InitializeVault<'info> {
-    pub fn initialize_config_and_vault( &mut self, bump: InitializeVaultBumps, uri: String) -> Result<()> {
+    pub fn initialize_config_and_vault(
+        &mut self,
+        bump: InitializeVaultBumps,
+        uri: String,
+    ) -> Result<()> {
         self.stablecoin_config.set_inner(StablecoinConfig {
             authority: self.admin.key(),
             mint: self.bhrt_collateral_mint.key(),
@@ -77,6 +89,11 @@ impl<'info> InitializeVault<'info> {
             stablecoin_config_bump: bump.stablecoin_config,
             stablecoin_mint_bump: bump.stabelcoin_mint,
             bhrt_collateral_vault_bump: bump.bhrt_collateral_vault,
+        });
+
+        self.bhrt_price_oracle.set_inner(PriceFeed {
+            feed: 50, // 50 USD per BHRT
+            bhrt_price_oracle_bump: bump.bhrt_price_oracle,
         });
 
         let cpi_accounts = TokenMetadataInitialize {

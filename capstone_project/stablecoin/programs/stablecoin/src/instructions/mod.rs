@@ -1,6 +1,10 @@
 pub mod initialize;
-pub mod mintStablecoin;
+pub mod openPosition;
+pub mod liquidation;
+pub mod positionDebtSettlement;
 
-pub use mintStablecoin::*;
+pub use positionDebtSettlement::*;
+pub use liquidation::*;
+pub use openPosition::*;
 pub use initialize::*;
 

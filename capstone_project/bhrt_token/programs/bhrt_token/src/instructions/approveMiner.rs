@@ -1,16 +1,16 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
-    associated_token::AssociatedToken, 
-    token_interface::{ Mint, TokenAccount, TransferChecked, TokenInterface, transfer_checked}
+    associated_token::AssociatedToken,
+    token_interface::{transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked},
 };
 
 use crate::error::NftMintError;
-use crate::state::{ProgramState, MinerInfo};
+use crate::state::{MinerInfo, ProgramState};
 
 #[derive(Accounts)]
 #[instruction(miner_to_add: Pubkey)]
 pub struct ApproveMiner<'info> {
-      #[account(mut)]
+    #[account(mut)]
     pub authority: Signer<'info>,
     #[account(
         mut,
@@ -23,12 +23,13 @@ pub struct ApproveMiner<'info> {
 }
 
 impl<'info> ApproveMiner<'info> {
-
     pub fn approve_miner(&mut self, miner_to_add: Pubkey) -> Result<()> {
-
-        require!(!self.program_state.approved_miners.contains(&miner_to_add), NftMintError::MinerAlreadyApproved);
+        require!(
+            !self.program_state.approved_miners.contains(&miner_to_add),
+            NftMintError::MinerAlreadyApproved
+        );
         self.program_state.approved_miners.push(miner_to_add);
-        
+
         Ok(())
     }
 }

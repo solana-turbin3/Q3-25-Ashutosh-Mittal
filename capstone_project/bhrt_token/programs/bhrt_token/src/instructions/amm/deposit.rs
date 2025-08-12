@@ -132,8 +132,8 @@ impl<'info> Deposit<'info> {
 
             require!(bhrt<=max_bhrt && usdt <= max_usdt, AmmError::SlippageExceeded);
 
-            self.deposit_tokens(true, bhrt);
-            self.deposit_tokens(false, usdt);
+            self.deposit_tokens(true, bhrt)?;
+            self.deposit_tokens(false, usdt)?;
             self.mint_lp_token(amount)
         }
 

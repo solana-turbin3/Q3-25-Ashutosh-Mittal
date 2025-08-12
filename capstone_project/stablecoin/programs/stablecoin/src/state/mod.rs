@@ -27,8 +27,17 @@ pub struct StablecoinConfig {
 #[derive(InitSpace)]
 pub struct StablecoinMinter {
     pub user: Pubkey,
-    pub collateral_amount: u64,
+    pub number_of_bhrt_collateral: u64,
+    pub bhrt_usd_priced: u64,
     pub debt_amount: u64,
     pub bhrt_collateral_mint: Pubkey,
     pub stablecoin_minter_bump: u8,
+}
+
+
+#[account]
+#[derive(InitSpace)]
+pub struct PriceFeed {
+    pub feed: u64,
+    pub bhrt_price_oracle_bump: u8,
 }

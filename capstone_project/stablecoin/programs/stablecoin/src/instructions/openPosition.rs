@@ -1,16 +1,20 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
-    associated_token::AssociatedToken,token_interface::{
-        token_metadata_initialize,MintTo, transfer_checked, Mint,mint_to, TokenAccount, TokenInterface,
-        TokenMetadataInitialize, TransferChecked,
-    }
+    associated_token::AssociatedToken,
+    token_interface::{
+        mint_to, transfer_checked, Mint, MintTo, TokenAccount, TokenInterface, TransferChecked,
+    },
 };
 
-use crate::state::{StablecoinConfig, StablecoinMinter};
-
+use crate::constants::{BASIS_POINTS, COLLATERAL_RATIO};
+use crate::{
+    error::ErrorCode,
+    state::{StablecoinConfig, StablecoinMinter},
+    PriceFeed,
+};
 
 #[derive(Accounts)]
-pub struct MintStablecoin<'info> {
+pub struct OpenPosition<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 
@@ -32,6 +36,13 @@ pub struct MintStablecoin<'info> {
     pub stablecoin_config: Account<'info, StablecoinConfig>,
 
     #[account(
+        mut,
+        seeds = [b"bhrt_price_oracle"],
+        bump = bhrt_price_oracle.bhrt_price_oracle_bump
+    )]
+    pub bhrt_price_oracle: Account<'info, PriceFeed>,
+
+    #[account(
         init,
         payer = user,
         seeds = [b"stablecoin_minter", user.key().as_ref()],
@@ -42,7 +53,7 @@ pub struct MintStablecoin<'info> {
 
     #[account(
         mut,
-        seeds=[b"BHRT"],
+        seeds=[b"HST"],
         bump,
         mint::token_program = token_program,
     )]
@@ -71,26 +82,28 @@ pub struct MintStablecoin<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
-
 // Constants for collateralization
-const COLLATERAL_RATIO: u16 = 15000; // 150% in basis points (15000/10000 = 1.5)
-const BASIS_POINTS: u16 = 10000;
+// const COLLATERAL_RATIO: u16 = 15000; // 150% in basis points (15000/10000 = 1.5)
+// const BASIS_POINTS: u16 = 10000;
 
-
-impl<'info> MintStablecoin<'info> {
-    pub fn mint_stablecoin(&mut self, collateral_amount: u64, stablecoin_amount: u64, bump: MintStablecoinBumps) -> Result<()> {
-        
+impl<'info> OpenPosition<'info> {
+    pub fn open_position(
+        &mut self,
+        collateral_amount: u64,
+        stablecoin_amount: u64,
+        bump: OpenPositionBumps,
+    ) -> Result<()> {
         // Step 1: Get BTCST price from oracle (simplified - you'll need actual oracle integration)
-        let btcst_price = 5000000000u64; // Returns price in USD with 8 decimals
-        
+        let btcst_price = self.bhrt_price_oracle.feed; // Returns price in USD with 8 decimals
+
         // Step 2: Calculate collateral value in USD
         let collateral_value_usd = (collateral_amount as u128)
             .checked_mul(btcst_price as u128)
             .ok_or(ProgramError::ArithmeticOverflow)?
             .checked_div(10_u128.pow(self.bhrt_collateral_mint.decimals as u32))
-            .ok_or(ProgramError::ArithmeticOverflow)?
-            .checked_div(10_u128.pow(8)) // Oracle price decimals
             .ok_or(ProgramError::ArithmeticOverflow)?;
+        // .checked_div(10_u128.pow(8)) // Oracle price decimals
+        // .ok_or(ProgramError::ArithmeticOverflow)?;
 
         // Step 3: Calculate maximum stablecoin that can be minted (collateral_value / 1.5)
         let max_stablecoin_mintable = collateral_value_usd
@@ -113,10 +126,7 @@ impl<'info> MintStablecoin<'info> {
             authority: self.user.to_account_info(),
         };
 
-        let transfer_ctx = CpiContext::new(
-            self.token_program.to_account_info(),
-            transfer_accounts,
-        );
+        let transfer_ctx = CpiContext::new(self.token_program.to_account_info(), transfer_accounts);
 
         transfer_checked(
             transfer_ctx,
@@ -143,7 +153,8 @@ impl<'info> MintStablecoin<'info> {
 
         self.stablecoin_minter.set_inner(StablecoinMinter {
             user: self.user.key(),
-            collateral_amount: collateral_amount,
+            number_of_bhrt_collateral: collateral_amount,
+            bhrt_usd_priced: btcst_price,
             debt_amount: stablecoin_amount,
             bhrt_collateral_mint: self.bhrt_collateral_mint.key(),
             stablecoin_minter_bump: bump.stablecoin_minter,
@@ -151,19 +162,18 @@ impl<'info> MintStablecoin<'info> {
 
         // Step 7: Update global collateral and debt in StablecoinConfig
         let config = &mut self.stablecoin_config;
-        config.total_bhrt_collateral_staked = config.total_bhrt_collateral_staked
+        config.total_bhrt_collateral_staked = config
+            .total_bhrt_collateral_staked
             .checked_add(collateral_amount)
             .ok_or(ProgramError::ArithmeticOverflow)?;
-        config.total_stablecoin_minted = config.total_stablecoin_minted
+        config.total_stablecoin_minted = config
+            .total_stablecoin_minted
             .checked_add(stablecoin_amount)
             .ok_or(ProgramError::ArithmeticOverflow)?;
-        config.number_of_investors = config.number_of_investors
+        config.number_of_investors = config
+            .number_of_investors
             .checked_add(1)
             .ok_or(ProgramError::ArithmeticOverflow)?;
-
-        
-
-
 
         // Step 8: Mint stablecoin to user
         let mint_accounts = MintTo {
@@ -175,7 +185,7 @@ impl<'info> MintStablecoin<'info> {
         let seeds = &[
             b"stablecoin_config",
             self.bhrt_collateral_mint.to_account_info().key.as_ref(),
-            &[self.stablecoin_config.stablecoin_config_bump]
+            &[self.stablecoin_config.stablecoin_config_bump],
         ];
         let signer_seeds = &[&seeds[..]];
 
@@ -203,12 +213,4 @@ impl<'info> MintStablecoin<'info> {
     //     // For now, return a mock price (e.g., $50 per BTCST with 8 decimals)
     //     Ok(5000000000u64) // $50.00000000
     // }
-}
-
-#[error_code]
-pub enum ErrorCode {
-    #[msg("Insufficient collateral for requested stablecoin amount")]
-    InsufficientCollateral,
-    #[msg("Arithmetic overflow")]
-    ArithmeticOverflow,
 }

@@ -4,7 +4,7 @@ use anchor_spl::{
     token_interface::{Mint, TokenAccount, TokenInterface},
 };
 
-use crate::state::{ProgramState, AmmConfig};
+use crate::state::{AmmConfig, ProgramState};
 
 #[derive(Accounts)]
 // #[instruction(seed: u64)]
@@ -53,7 +53,6 @@ pub struct AmmInitialize<'info> {
 )]
     pub lp_mint: InterfaceAccount<'info, Mint>,
 
-
     #[account(
         init,
         payer= authority,
@@ -79,7 +78,15 @@ pub struct AmmInitialize<'info> {
 
 impl<'info> AmmInitialize<'info> {
     pub fn amm_initialize(&mut self, fee: u16, bumps: AmmInitializeBumps) -> Result<()> {
-        self.amm_config.set_inner(AmmConfig { authority: Some(self.authority.key()), bhrt_mint: self.bhrt_mint.key(), udst_mint: self.udst_mint.key(), fee, locked: false, amm_config_bump: bumps.amm_config, lp_bump: bumps.lp_mint });
+        self.amm_config.set_inner(AmmConfig {
+            authority: Some(self.authority.key()),
+            bhrt_mint: self.bhrt_mint.key(),
+            udst_mint: self.udst_mint.key(),
+            fee,
+            locked: false,
+            amm_config_bump: bumps.amm_config,
+            lp_bump: bumps.lp_mint,
+        });
         Ok(())
     }
 }
