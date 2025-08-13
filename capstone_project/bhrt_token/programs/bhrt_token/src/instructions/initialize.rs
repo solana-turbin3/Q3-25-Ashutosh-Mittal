@@ -110,7 +110,7 @@ pub struct Initialize<'info> {
     pub nft_collection_metadata: UncheckedAccount<'info>,
     
     #[account(
-        address= solana_program::sysvar::instructions::ID
+        address= anchor_lang::solana_program::sysvar::instructions::ID
     )]
     /// CHECK: This is the instructions sysvar
         pub instruction_sysvar: AccountInfo<'info>,
@@ -216,10 +216,12 @@ impl<'info> Initialize<'info> {
             // .collection_details(mpl_token_metadata::types::CollectionDetails::V1 { size: 0 })
             .invoke_signed(signers_seeds)?;
 
+            msg!("Minting collection token");
            MintV1CpiBuilder::new(&self.metadata_program.to_account_info())
                 .token(&self.collection_token_account.to_account_info())
                 .token_owner(Some(&self.program_state.to_account_info()))
                 .metadata(&self.nft_collection_metadata.to_account_info())
+                // .token_record(Some(&self.collection_mint.to_account_info()))
                 .master_edition(Some(&self.collection_master_edition_account.to_account_info()))
                 .mint(&self.collection_mint.to_account_info())
                 .payer(&self.authority.to_account_info())

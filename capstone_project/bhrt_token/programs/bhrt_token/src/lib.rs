@@ -25,8 +25,13 @@ pub mod bhrt_token {
         Ok(())
     }
 
-    pub fn onboard_miner(ctx: Context<OnboardMiner>, nft_id: u64,name: String, uri: String, mining_power: u64) -> Result<()> {
-        ctx.accounts.onboard_miner(nft_id,  name, uri, mining_power, &ctx.bumps)?;
+    pub fn onboard_miner_nft(ctx: Context<OnboardMinerNFT>, nft_id: u64,name: String, uri: String) -> Result<()> {
+        ctx.accounts.onboard_miner_nft(nft_id,  name, uri, &ctx.bumps)?;
+        Ok(())
+    }
+
+    pub fn onboard_miner_mint(ctx: Context<OnboardMinerMint>, nft_id: u64, mining_power: u64) -> Result<()> {
+        ctx.accounts.onboard_miner_mint(nft_id, mining_power)?;
         Ok(())
     }
 
@@ -46,7 +51,7 @@ pub mod bhrt_token {
         ctx.accounts.swap(is_bhrt, amount_in, min_amount_out)
     }
 
-    pub fn revoke_miner_participation(ctx: Context<RevokeMinerParticipation>, amount: u64) -> Result<()> {
-        ctx.accounts.revoke_miner_participation(&ctx.bumps, amount)
+    pub fn revoke_miner_participation(ctx: Context<RevokeMinerParticipation>,nft_id: u64,  amount: u64) -> Result<()> {
+        ctx.accounts.revoke_miner_participation(nft_id, amount, &ctx.bumps)
     }
 }

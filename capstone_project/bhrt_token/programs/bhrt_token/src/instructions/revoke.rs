@@ -146,14 +146,14 @@ pub metadata_program: Program<'info, Metadata>,
     pub miner_bhrt: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
-        address= solana_program::sysvar::instructions::ID
+        address= anchor_lang::solana_program::sysvar::instructions::ID
     )]
     /// CHECK: This is the instructions sysvar
     pub instruction_sysvar: AccountInfo<'info>,
 
     // ---- Required Programs ----
     pub associated_token_program: Program<'info, AssociatedToken>,
-    pub rent: Sysvar<'info, Rent>,
+    // pub rent: Sysvar<'info, Rent>,
     pub system_program: Program<'info, System>,
     pub token_program: Interface<'info, TokenInterface>,
 }
@@ -162,20 +162,21 @@ pub metadata_program: Program<'info, Metadata>,
 
 impl<'info> RevokeMinerParticipation <'info> {
 
-pub fn revoke_miner_participation( &mut self, bump: &RevokeMinerParticipationBumps,amount: u64) -> Result<()> {
+pub fn revoke_miner_participation( &mut self,nft_id: u64,amount: u64, bump: &RevokeMinerParticipationBumps,) -> Result<()> {
 
         require!(self.program_state.approved_miners.contains(&self.miner.key()), NftMintError::MinerNotApproved);
 
      require!(self.miner_info.mint_amount == amount, RevokeMinerParticipationError::InsufficientBhrAmount);
     
     
-let state_seeds =&[
-    b"program_state".as_ref(),
-    &[self.program_state.program_state_bump]
-];
-
-let signer_seeds = &[&state_seeds[..]];
-
+     let state_seeds =&[
+        b"program_state".as_ref(),
+        &[self.program_state.program_state_bump]
+    ];
+    
+    let signer_seeds = &[&state_seeds[..]];
+        
+msg!("Unverifying collection");
 UnverifyCollectionV1CpiBuilder::new(&self.metadata_program.to_account_info())
 .authority(&self.program_state.to_account_info())
 .metadata(&self.miner_nft_metadata.to_account_info())
@@ -196,40 +197,37 @@ UnverifyCollectionV1CpiBuilder::new(&self.metadata_program.to_account_info())
 // .spl_token_program(Some(&self.token_program.to_account_info()))
 // .sysvar_instructions(&self.instruction_sysvar.to_account_info())
 // .invoke_signed(signer_seeds)?;
-
+msg!("Burning NFT");
 BurnV1CpiBuilder::new(&self.metadata_program.to_account_info())
-.authority(&self.program_state.to_account_info())
-.token(&self.miner_nft_token_account.to_account_info())
+.authority(&self.miner.to_account_info()) // token owner
 .metadata(&self.miner_nft_metadata.to_account_info())
-.master_edition(Some(&self.miner_nft_master_edition_account.to_account_info()))
+.edition(Some(&self.miner_nft_master_edition_account.to_account_info())) // keep only 'edition'
+.token(&self.miner_nft_token_account.to_account_info())
 .mint(&self.miner_nft_mint.to_account_info())
-// .payer(&self.miner.to_account_info())
-
 .system_program(&self.system_program.to_account_info())
 .spl_token_program(&self.token_program.to_account_info())
-// .spl_ata_program(&self.associated_token_program.to_account_info())
 .sysvar_instructions(&self.instruction_sysvar.to_account_info())
-.amount(1).invoke_signed(signer_seeds)?;
-            
+.amount(1)
+.invoke()?;
 
 
     
+msg!("Burning BHRT");
 
 
-
-let cpi_program = self.token_program.to_account_info();
+let cpi_program: AccountInfo<'_> = self.token_program.to_account_info();
 let cpi_accounts = Burn {
     mint: self.bhrt_mint.to_account_info(),
     from: self.miner_bhrt.to_account_info(),
     authority: self.miner.to_account_info(),
 };
 
-let signer_seeds: &[&[&[u8]]] = &[&[
-    b"program_state",
-    &[self.program_state.program_state_bump],
-]];
+// let signer_seeds: &[&[&[u8]]] = &[&[
+//     b"program_state",
+//     &[self.program_state.program_state_bump],
+// ]];
 
-let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer_seeds);
+let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
 burn(cpi_ctx, amount)?;
 
 
