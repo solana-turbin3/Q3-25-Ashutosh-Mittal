@@ -25,8 +25,8 @@ pub mod bhrt_token {
         Ok(())
     }
 
-    pub fn onboard_miner(ctx: Context<OnboardMiner>, name: String, uri: String,nft_id: u64, mining_power: u64) -> Result<()> {
-        ctx.accounts.onboard_miner(&ctx.bumps, name, uri, nft_id, mining_power)?;
+    pub fn onboard_miner(ctx: Context<OnboardMiner>, nft_id: u64,name: String, uri: String, mining_power: u64) -> Result<()> {
+        ctx.accounts.onboard_miner(nft_id,  name, uri, mining_power, &ctx.bumps)?;
         Ok(())
     }
 

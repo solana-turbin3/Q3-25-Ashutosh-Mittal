@@ -53,6 +53,7 @@ pub struct OnboardMiner<'info> {
     pub nft_collection_metadata: UncheckedAccount<'info>,
 
 pub metadata_program: Program<'info, Metadata>,
+
     #[account(
         mut,
         seeds = [
@@ -81,7 +82,7 @@ pub metadata_program: Program<'info, Metadata>,
     mint::token_program = token_program,
     bump,
     )]
-  pub miner_nft_mint: InterfaceAccount<'info, Mint>,
+  pub miner_nft_mint: Box<InterfaceAccount<'info, Mint>>,
 
   #[account(
         init,
@@ -182,7 +183,7 @@ pub struct NftMinted {
 impl<'info> OnboardMiner<'info> {
 
 
-     pub fn onboard_miner( &mut self, bump: &OnboardMinerBumps,name: String, uri: String,nft_id: u64, mining_power: u64) -> Result<()> {
+     pub fn onboard_miner( &mut self, nft_id: u64,name: String, uri: String, mining_power: u64,  bump: &OnboardMinerBumps) -> Result<()> {
 
         require!(self.program_state.approved_miners.contains(&self.miner.key()), NftMintError::MinerNotApproved);
 

@@ -12,7 +12,7 @@ import { Metaplex, keypairIdentity } from "@metaplex-foundation/js";
 import { assert } from "chai";
 
 
-describe("bhrt_token", () => {
+
   // const provider = anchor.getProvider();
   const provider = anchor.AnchorProvider.env();   
   anchor.setProvider(provider);
@@ -183,6 +183,8 @@ describe("bhrt_token", () => {
     tokenProgram
   );
 
+
+
   // const miner_nft_metadata = PublicKey.findProgramAddressSync(
 
   //   [
@@ -193,7 +195,24 @@ describe("bhrt_token", () => {
   //   metadataProgram
   // )[0];
 
-  const miner_nft_metadata = metaplex.nfts().pdas().metadata({ mint: miner_nft_mint });
+  const [miner_nft_master_edition_account, miner_nft_master_edition_account_bump] =  PublicKey.findProgramAddressSync(
+    [
+      Buffer.from("metadata"),
+        metadataProgram.toBuffer(),
+        miner_nft_mint.toBuffer(),
+        Buffer.from("edition"),
+    ],
+    metadataProgram
+  );
+  // const nft_collection_metadata = metaplex.nfts().pdas().metadata({ mint: collection_mint });
+  const [miner_nft_metadata, miner_nft_metadata_bump] =  PublicKey.findProgramAddressSync(
+    [
+      Buffer.from("metadata"),
+        metadataProgram.toBuffer(),
+        miner_nft_mint.toBuffer(),
+    ],
+    metadataProgram
+  );
 
   const [miner_info, miner_info_bump] = PublicKey.findProgramAddressSync(
     [
@@ -209,6 +228,7 @@ describe("bhrt_token", () => {
     tokenProgram
   );
 
+  describe("bhrt_token", () => {
     // --- Airdrops ---
     // before(async () => {
     //   await provider.connection.requestAirdrop(authority.publicKey, 10 * LAMPORTS_PER_SOL).then(confirm);
@@ -286,7 +306,204 @@ describe("bhrt_token", () => {
     // Remove the duplicate it() block
   });
     
-  //   });
-  // });
+ 
+  describe("approve_miner", () => {
+
+    it("Approves a miner for onboarding", async () => {
+      try {
+        console.log("🔍 Approving miner for onboarding...");
+        
+        await program.methods.approveMiners(miner.publicKey)
+          .accounts({
+            authority: authority.publicKey,
+            programState: program_state,
+            systemProgram: system,
+          })
+          .signers([authority])
+          .rpc()
+          .then(confirm)
+          .then(log);
+  
+        // Verify miner is approved
+        const programState = await program.account.programState.fetch(program_state);
+        assert.ok(
+          programState.approvedMiners.some(approvedMiner => approvedMiner.equals(miner.publicKey)),
+          "Miner should be in approved miners list"
+        );
+        console.log("✅ Miner approved successfully");
+  
+      } catch (error) {
+        console.error("Miner approval failed!");
+        if (error.logs) {
+          console.error("Full logs:");
+          for (const log of error.logs) {
+            console.log(`- ${log}`);
+          }
+        }
+        throw error;
+      }
+    });
 
 
+  });
+
+  describe("onboard miner", () => {
+    it("Onboards an approved miner and mints NFT with BHRT tokens", async () => {
+      try {
+        
+        const minerName = "Bitcoin Mining Farm #1";
+        const minerUri = "https://arweave.net/miner-legal-document-hash";
+        const nftId = NFT_ID;
+        const miningPower = 1000; // 1000 hashrate units
+  
+        console.log("💰 Funding miner account...");
+        const minerBalance = await provider.connection.getBalance(miner.publicKey);
+        if (minerBalance < 1_000_000_000) {
+          const signature = await provider.connection.requestAirdrop(miner.publicKey, 2_000_000_000);
+          await provider.connection.confirmTransaction({
+            signature,
+            blockhash: (await provider.connection.getLatestBlockhash()).blockhash,
+            lastValidBlockHeight: (await provider.connection.getLatestBlockhash()).lastValidBlockHeight,
+          });
+        }
+  
+        // const [miner_nft_master_edition_account] = PublicKey.findProgramAddressSync(
+        //   [
+        //     Buffer.from("metadata"),
+        //     metadataProgram.toBuffer(),
+        //     miner_nft_mint.toBuffer(),
+        //     Buffer.from("edition"),
+        //   ],
+        //   metadataProgram
+        // );
+  
+        console.log("🏗️ Onboarding miner and minting NFT...");
+        console.log("Parameters:");
+        console.log("- Name:", minerName);
+        console.log("- URI:", minerUri);
+        console.log("- NFT ID:", nftId);
+        console.log("- Mining Power:", miningPower);
+  
+        await program.methods.onboardMiner(
+          nftId,
+          minerName,
+          minerUri,
+          new anchor.BN(miningPower)
+        )
+        .accountsPartial({
+          miner: miner.publicKey,
+          authority: authority.publicKey,
+          programState: program_state,
+          collectionMint: collection_mint,
+          nftCollectionMetadata: nft_collection_metadata,
+          metadataProgram: metadataProgram,
+          collectionMasterEditionAccount: collection_master_edition_account,
+          minerNftMint: miner_nft_mint,
+          minerNftTokenAccount: miner_nft_token_account,
+          minerNftMasterEditionAccount: miner_nft_master_edition_account,
+          minerNftMetadata: miner_nft_metadata,
+          minerInfo: miner_info,
+          bhrtMint: bhrt_mint,
+          minerBhrt: miner_bhrt,
+          instructionSysvar: sysvar_instructions,
+          associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
+          rent: rent,
+          systemProgram: system,
+          tokenProgram: tokenProgram,
+        })
+        .signers([miner])
+        .rpc()
+        .then(confirm)
+        .then(log);
+  
+        console.log("✅ Miner onboarded successfully");
+  
+        // Verify program state updates
+        console.log("🔍 Verifying program state updates...");
+        const updatedProgramState = await program.account.programState.fetch(program_state);
+        assert.equal(
+          updatedProgramState.nftIdCounter.toNumber(),
+          1,
+          "NFT ID counter should increment to 1"
+        );
+        console.log("✅ Program state NFT counter incremented");
+  
+        // Verify miner info account
+        console.log("🔍 Verifying miner info account...");
+        const minerInfoAccount = await program.account.minerInfo.fetch(miner_info);
+        assert.equal(minerInfoAccount.hashratePower.toNumber(), miningPower, "Mining power should match");
+        assert.equal(minerInfoAccount.legalDocumentUri, minerUri, "Legal document URI should match");
+        assert.ok(minerInfoAccount.hashrateTokenMint.equals(bhrt_mint), "BHRT mint should match");
+        assert.equal(minerInfoAccount.mintAmount.toNumber(), miningPower * 10, "Mint amount should be mining power * 10");
+        console.log("✅ Miner info account verified");
+  
+        // Verify NFT mint account
+        console.log("🔍 Verifying NFT mint account...");
+        const nftMintInfo = await spl.getMint(provider.connection as any, miner_nft_mint, undefined, tokenProgram);
+        assert.equal(nftMintInfo.supply, BigInt(1), "NFT mint supply should be 1");
+        assert.equal(nftMintInfo.decimals, 0, "NFT mint should have 0 decimals");
+        assert.ok(nftMintInfo.mintAuthority.equals(program_state), "Mint authority should be program state");
+        console.log("✅ NFT mint account verified");
+  
+        // Verify NFT token account
+        console.log("🔍 Verifying NFT token account...");
+        const nftTokenAccount = await spl.getAccount( provider.connection as any, miner_nft_token_account, undefined, tokenProgram);
+        assert.equal(nftTokenAccount.amount, BigInt(1), "Miner should own 1 NFT token");
+        assert.ok(nftTokenAccount.owner.equals(miner.publicKey), "NFT should be owned by miner");
+        assert.ok(nftTokenAccount.mint.equals(miner_nft_mint), "Token account mint should match NFT mint");
+        console.log("✅ NFT token account verified");
+  
+        // Verify BHRT token balance
+        console.log("🔍 Verifying BHRT token balance...");
+        const bhrtTokenAccount = await spl.getAccount(provider.connection as any, miner_bhrt, undefined, tokenProgram);
+        const expectedBhrtAmount = miningPower * 10;
+        assert.equal(
+          bhrtTokenAccount.amount, 
+          BigInt(expectedBhrtAmount), 
+          `Miner should have ${expectedBhrtAmount} BHRT tokens`
+        );
+        assert.ok(bhrtTokenAccount.owner.equals(miner.publicKey), "BHRT tokens should be owned by miner");
+        console.log("✅ BHRT token balance verified");
+  
+        // Verify NFT metadata exists (basic check)
+        console.log("🔍 Verifying NFT metadata account exists...");
+        const metadataAccountInfo = await provider.connection.getAccountInfo(miner_nft_metadata);
+        assert.ok(metadataAccountInfo, "NFT metadata account should exist");
+        assert.ok(metadataAccountInfo.data.length > 0, "NFT metadata should have data");
+        console.log("✅ NFT metadata account verified");
+  
+        // Verify master edition exists
+        console.log("🔍 Verifying NFT master edition account exists...");
+        const masterEditionAccountInfo = await provider.connection.getAccountInfo(miner_nft_master_edition_account);
+        assert.ok(masterEditionAccountInfo, "NFT master edition account should exist");
+        assert.ok(masterEditionAccountInfo.data.length > 0, "NFT master edition should have data");
+        console.log("✅ NFT master edition account verified");
+  
+        console.log("\n=== Miner Onboarding Results ===");
+        console.log("Miner Address:        ", miner.publicKey.toString());
+        console.log("NFT Mint:            ", miner_nft_mint.toString());
+        console.log("NFT Token Account:   ", miner_nft_token_account.toString());
+        console.log("BHRT Token Account:  ", miner_bhrt.toString());
+        console.log("Miner Info:          ", miner_info.toString());
+        console.log("Mining Power:        ", miningPower);
+        console.log("BHRT Tokens Minted:  ", expectedBhrtAmount);
+        console.log("NFT ID:              ", nftId);
+        console.log("================================\n");
+  
+      } catch (error) {
+        console.error("Miner onboarding failed!");
+        if (error.logs) {
+          console.error("Full logs:");
+          for (const log of error.logs) {
+            console.log(`- ${log}`);
+          }
+        }
+        throw error;
+      }
+    });
+  
+
+  });
+
+
+  

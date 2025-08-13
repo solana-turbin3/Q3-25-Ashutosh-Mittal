@@ -38,7 +38,7 @@ pub struct Initialize<'info> {
     mint::token_program = token_program,
     extensions::metadata_pointer::authority = program_state,
     extensions::metadata_pointer::metadata_address = bhrt_metadata.key()
-)]
+    )]
     pub bhrt_mint: InterfaceAccount<'info, Mint>,
 
     // #[account(
