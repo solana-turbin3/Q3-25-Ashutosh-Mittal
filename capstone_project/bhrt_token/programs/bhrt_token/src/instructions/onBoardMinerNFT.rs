@@ -1,14 +1,14 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken, metadata::{
-    create_master_edition_v3, create_metadata_accounts_v3, verify_sized_collection_item, CreateMasterEditionV3, CreateMetadataAccountsV3, Metadata, VerifySizedCollectionItem
+     Metadata
 }, token_2022::{mint_to, MintTo}, token_interface::{ transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked}
 };
 
 use mpl_token_metadata::{instructions::{CreateV1CpiBuilder, MintV1CpiBuilder, SetAndVerifyCollectionCpiBuilder, VerifyCollectionV1CpiBuilder}, types::{Collection, DataV2, PrintSupply, TokenStandard}};
 
 use crate::{error::NftMintError};
-use crate::state::{ProgramState, MinerInfo, AmmConfig};
+use crate::state::{ProgramState, MinerInfo};
 
 #[derive(Accounts)]
 #[instruction(nft_id: u64)]

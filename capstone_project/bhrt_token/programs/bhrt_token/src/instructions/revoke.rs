@@ -11,7 +11,7 @@ use crate::error::{NftMintError, RevokeMinerParticipationError};
 use crate::state::{ProgramState, MinerInfo};
 
 #[derive(Accounts)]
-#[instruction(nft_id: u64)]
+#[instruction(nft_id: u64,amount: u64)]
 pub struct RevokeMinerParticipation <'info> {
   #[account(mut)]
   pub miner: Signer<'info>,
@@ -75,7 +75,7 @@ pub metadata_program: Program<'info, Metadata>,
     mut, 
     seeds = ["nft_mint".as_bytes(), miner.key().as_ref(), nft_id.to_le_bytes().as_ref()], 
     mint::token_program = token_program,
-    bump = miner_info.miner_nft_bump
+    bump 
     )]
   pub miner_nft_mint: InterfaceAccount<'info, Mint>,
 
@@ -121,6 +121,7 @@ pub metadata_program: Program<'info, Metadata>,
 // ---- Miner Info ----
     #[account( 
     mut, 
+    constraint = miner_info.mint_amount >= amount,
     seeds = ["miner".as_bytes(), miner.key().as_ref()], 
     bump = miner_info.miner_bump,
     close = miner
@@ -166,7 +167,7 @@ pub fn revoke_miner_participation( &mut self,nft_id: u64,amount: u64, bump: &Rev
 
         require!(self.program_state.approved_miners.contains(&self.miner.key()), NftMintError::MinerNotApproved);
 
-     require!(self.miner_info.mint_amount == amount, RevokeMinerParticipationError::InsufficientBhrAmount);
+    //  require!(self.miner_info.mint_amount == amount, RevokeMinerParticipationError::InsufficientBhrAmount);
     
     
      let state_seeds =&[
@@ -197,6 +198,7 @@ UnverifyCollectionV1CpiBuilder::new(&self.metadata_program.to_account_info())
 // .spl_token_program(Some(&self.token_program.to_account_info()))
 // .sysvar_instructions(&self.instruction_sysvar.to_account_info())
 // .invoke_signed(signer_seeds)?;
+
 msg!("Burning NFT");
 BurnV1CpiBuilder::new(&self.metadata_program.to_account_info())
 .authority(&self.miner.to_account_info()) // token owner
@@ -216,23 +218,20 @@ msg!("Burning BHRT");
 
 
 let cpi_program: AccountInfo<'_> = self.token_program.to_account_info();
+
+
 let cpi_accounts = Burn {
     mint: self.bhrt_mint.to_account_info(),
     from: self.miner_bhrt.to_account_info(),
     authority: self.miner.to_account_info(),
 };
 
-// let signer_seeds: &[&[&[u8]]] = &[&[
-//     b"program_state",
-//     &[self.program_state.program_state_bump],
-// ]];
-
 let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
 burn(cpi_ctx, amount)?;
 
+msg!("BHRT burned successfully");
 
 
-self.miner_info.mint_amount -= amount;
 
         Ok(())
     }

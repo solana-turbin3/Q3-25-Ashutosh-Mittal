@@ -137,7 +137,7 @@ impl<'info> Withdraw<'info> {
 
     pub fn burn_lp_tokens(&mut self, amount: u64) -> Result<()> {
         let cpi_program = self.token_program.to_account_info();
-        let cpi_accounts = Burn {
+        let cpi_accounts: Burn<'_> = Burn {
             mint: self.lp_mint.to_account_info(),
             from: self.user_lp.to_account_info(),
             authority: self.user.to_account_info(),

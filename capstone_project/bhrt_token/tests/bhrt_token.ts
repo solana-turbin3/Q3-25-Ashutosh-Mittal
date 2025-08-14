@@ -539,7 +539,7 @@ describe("Revoke miner participation", async () => {
     try {
 
 
-      const amount = 20; // 1000 hashrate units
+      const amount = 20; 
 
 
 
@@ -565,10 +565,11 @@ describe("Revoke miner participation", async () => {
           minerBhrt: miner_bhrt,
           instructionSysvar: sysvar_instructions,
           associatedTokenProgram: anchor.utils.token.ASSOCIATED_PROGRAM_ID,
-          systemProgram: system,
+          // systemProgram: system,
           tokenProgram: tokenProgram,
         })
         .signers([miner])
+        // .rpc({skipPreflight: true})
         .rpc()
         .then(confirm)
         .then(log);
