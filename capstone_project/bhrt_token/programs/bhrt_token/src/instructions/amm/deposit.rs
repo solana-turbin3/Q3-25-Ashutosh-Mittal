@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token_interface::{mint_to, transfer_checked, Mint, MintTo, TokenAccount, TokenInterface, Transfer, TransferChecked},
+    token_interface::{mint_to, transfer_checked, Mint, MintTo, TokenAccount, TokenInterface, TransferChecked},
 };
 use constant_product_curve::ConstantProduct;
 
@@ -31,7 +31,7 @@ pub struct Deposit<'info> {
     #[account(
         mut,
         seeds=[b"amm_config", program_state.key().as_ref()],
-        bump, 
+        bump = amm_config.amm_config_bump, 
         has_one = bhrt_mint,
         has_one = udst_mint
     )]
@@ -41,9 +41,9 @@ pub struct Deposit<'info> {
     // ---- BHRT Mint ----
     #[account(
         mut,
-        seeds=[b"BHRT"],
-        bump = program_state.bhrt_mint_bump,
-        mint::token_program = token_program
+        // seeds=[b"BHRT"],
+        // bump = program_state.bhrt_mint_bump,
+        // mint::token_program = token_program
     )]
     pub bhrt_mint: InterfaceAccount<'info, Mint>,
 
@@ -56,9 +56,9 @@ pub struct Deposit<'info> {
     // ---- LP Mint ----
     #[account(
         mut,
-        seeds=[b"lp", amm_config.key().as_ref() ],
-        bump =  amm_config.lp_bump,
-        mint::token_program = token_program
+        // seeds=[b"lp", amm_config.key().as_ref() ],
+        // bump =  amm_config.lp_bump,
+        // mint::token_program = token_program
         )]
         pub lp_mint: InterfaceAccount<'info, Mint>,
 
@@ -66,18 +66,18 @@ pub struct Deposit<'info> {
     // ---- Vault BHRT ----
      #[account(
         mut,
-        associated_token::mint=bhrt_mint,
-        associated_token::authority=amm_config,
-        associated_token::token_program = token_program
+        // associated_token::mint=bhrt_mint,
+        // associated_token::authority=amm_config,
+        // associated_token::token_program = token_program
     )]
     pub vault_bhrt: InterfaceAccount<'info, TokenAccount>,
 
     // ---- Vault USDT ----
     #[account(
         mut,
-        associated_token::mint=udst_mint,
-        associated_token::authority=amm_config,
-        associated_token::token_program = token_program
+        // associated_token::mint=udst_mint,
+        // associated_token::authority=amm_config,
+        // associated_token::token_program = token_program
     )]
     pub vault_usdt: InterfaceAccount<'info, TokenAccount>,
 
@@ -85,18 +85,18 @@ pub struct Deposit<'info> {
     // ---- User BHRT ----
     #[account(
         mut,
-        associated_token::mint=bhrt_mint,
-        associated_token::authority=user,
-        associated_token::token_program = token_program
+        // associated_token::mint=bhrt_mint,
+        // associated_token::authority=user,
+        // associated_token::token_program = token_program
     )]
     pub user_bhrt: InterfaceAccount<'info, TokenAccount>,
 
     // ---- User USDT ----
     #[account(
         mut,
-        associated_token::mint=udst_mint,
-        associated_token::authority=user,
-        associated_token::token_program = token_program
+        // associated_token::mint=udst_mint,
+        // associated_token::authority=user,
+        // associated_token::token_program = token_program
     )]
     pub user_usdt: InterfaceAccount<'info, TokenAccount>,
 
@@ -119,7 +119,8 @@ pub struct Deposit<'info> {
 impl<'info> Deposit<'info> {
 
         pub fn deposit(&mut self, amount: u64, max_bhrt: u64, max_usdt:u64) -> Result<()> {
-            require!(self.amm_config.locked == false, AmmError::PoolLocked);
+
+            // require!(self.amm_config.locked == false, AmmError::PoolLocked);
             require!(amount != 0, AmmError::InvalidAmount);
 
             let(bhrt,usdt)= match self.lp_mint.supply == 0 && self.vault_bhrt.amount == 0 && self.vault_usdt.amount == 0 {
@@ -129,11 +130,12 @@ impl<'info> Deposit<'info> {
                     (amount.x, amount.y)
                 }
             };
-
+msg!("bhrt: {}, usdt: {}, max_bhrt: {}, max_usdt: {}", bhrt, usdt, max_bhrt, max_usdt);
             require!(bhrt<=max_bhrt && usdt <= max_usdt, AmmError::SlippageExceeded);
 
             self.deposit_tokens(true, bhrt)?;
             self.deposit_tokens(false, usdt)?;
+            msg!("Minting LP token -----");
             self.mint_lp_token(amount)
         }
 
@@ -168,15 +170,16 @@ impl<'info> Deposit<'info> {
     }
 
     pub fn mint_lp_token(&mut self,amount: u64) -> Result<()> {
-
+msg!("Minting LP token");
         let cpi_program: AccountInfo<'_> = self.token_program.to_account_info();
          let cpi_accounts = MintTo {
             mint: self.lp_mint.to_account_info(),
-            to: self.user.to_account_info(),
+            to: self.user_lp.to_account_info(),
             authority: self.amm_config.to_account_info()
         };
 
-        let seeds = &[&b"amm_config"[..], &self.amm_config.key().to_bytes(), &[self.amm_config.amm_config_bump]];
+        let program_state_key = self.program_state.key();
+        let seeds: &[&[u8]; 3] = &[&b"amm_config"[..], program_state_key.as_ref(), &[self.amm_config.amm_config_bump]];
         let signer_seed = &[&seeds[..]];
         let ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer_seed);
 

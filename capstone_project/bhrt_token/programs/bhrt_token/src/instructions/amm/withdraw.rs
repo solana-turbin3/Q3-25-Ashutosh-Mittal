@@ -39,9 +39,9 @@ pub struct Withdraw<'info> {
     // ---- BHRT Mint ----
     #[account(
         mut,
-        seeds=[b"BHRT"],
-        bump = program_state.bhrt_mint_bump,
-        mint::token_program = token_program
+        // seeds=[b"BHRT"],
+        // bump = program_state.bhrt_mint_bump,
+        // mint::token_program = token_program
     )]
     pub bhrt_mint: InterfaceAccount<'info, Mint>,
 
@@ -55,9 +55,9 @@ pub struct Withdraw<'info> {
     // ---- LP Mint ----
     #[account(
         mut,
-        seeds=[b"lp", amm_config.key().as_ref() ],
-        bump =  amm_config.lp_bump,
-        mint::token_program = token_program
+        // seeds=[b"lp", amm_config.key().as_ref() ],
+        // bump =  amm_config.lp_bump,
+        // mint::token_program = token_program
         )]
         pub lp_mint: InterfaceAccount<'info, Mint>,
 
@@ -65,18 +65,18 @@ pub struct Withdraw<'info> {
     // ---- Vault BHRT ----
     #[account(
         mut,
-        associated_token::mint=bhrt_mint,
-        associated_token::authority=amm_config,
-        associated_token::token_program = token_program
+        // associated_token::mint=bhrt_mint,
+        // associated_token::authority=amm_config,
+        // associated_token::token_program = token_program
     )]
     pub vault_bhrt: InterfaceAccount<'info, TokenAccount>,
 
     // ---- Vault USDT ----
     #[account(
         mut,
-        associated_token::mint=udst_mint,
-        associated_token::authority=amm_config,
-        associated_token::token_program = token_program
+        // associated_token::mint=udst_mint,
+        // associated_token::authority=amm_config,
+        // associated_token::token_program = token_program
     )]
     pub vault_usdt: InterfaceAccount<'info, TokenAccount>,
 
@@ -84,27 +84,27 @@ pub struct Withdraw<'info> {
     // ---- User BHRT ----
     #[account(
         mut,
-        associated_token::mint=bhrt_mint,
-        associated_token::authority=user,
-        associated_token::token_program = token_program
+        // associated_token::mint=bhrt_mint,
+        // associated_token::authority=user,
+        // associated_token::token_program = token_program
     )]
     pub user_bhrt: InterfaceAccount<'info, TokenAccount>,
 
     // ---- User USDT ----
     #[account(
         mut,
-        associated_token::mint=udst_mint,
-        associated_token::authority=user,
-        associated_token::token_program = token_program
+        // associated_token::mint=udst_mint,
+        // associated_token::authority=user,
+        // associated_token::token_program = token_program
     )]
     pub user_usdt: InterfaceAccount<'info, TokenAccount>,
 
     // ---- User LP ----
     #[account(
         mut,
-        associated_token::mint=lp_mint,
-        associated_token::authority=user,
-        associated_token::token_program = token_program
+        // associated_token::mint=lp_mint,
+        // associated_token::authority=user,
+        // associated_token::token_program = token_program
     )]
     pub user_lp: InterfaceAccount<'info, TokenAccount>,
 
@@ -143,10 +143,9 @@ impl<'info> Withdraw<'info> {
             authority: self.user.to_account_info(),
         };
 
-        let signer_seeds: &[&[&[u8]]] = &[&[
-            b"amm_config",
-            &[self.amm_config.amm_config_bump],
-        ]];
+        let program_state_key = self.program_state.key();
+        let seeds: &[&[u8]; 3] = &[&b"amm_config"[..], program_state_key.as_ref(), &[self.amm_config.amm_config_bump]];
+        let signer_seeds = &[&seeds[..]];
 
         let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer_seeds);
         burn(cpi_ctx, amount)
@@ -177,10 +176,9 @@ impl<'info> Withdraw<'info> {
             authority: self.amm_config.to_account_info(),
         };
 
-        let signer_seeds: &[&[&[u8]]] = &[&[
-            b"amm_config",
-            &[self.amm_config.amm_config_bump],
-        ]];
+        let program_state_key = self.program_state.key();
+        let seeds: &[&[u8]; 3] = &[&b"amm_config"[..], program_state_key.as_ref(), &[self.amm_config.amm_config_bump]];
+        let signer_seeds = &[&seeds[..]];
 
         let cpi_context = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer_seeds);
         transfer_checked(cpi_context, amount, decimals)

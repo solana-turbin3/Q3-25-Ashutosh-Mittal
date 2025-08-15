@@ -19,7 +19,7 @@ pub struct AmmInitialize<'info> {
         has_one = authority
     )]
     pub program_state: Account<'info, ProgramState>,
-
+    
     #[account(
         init,
         payer= authority,
