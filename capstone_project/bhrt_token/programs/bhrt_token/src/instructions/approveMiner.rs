@@ -1,11 +1,6 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{
-    associated_token::AssociatedToken,
-    token_interface::{transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked},
-};
-
 use crate::error::NftMintError;
-use crate::state::{MinerInfo, ProgramState};
+use crate::state::{ProgramState};
 
 #[derive(Accounts)]
 #[instruction(miner_to_add: Pubkey)]

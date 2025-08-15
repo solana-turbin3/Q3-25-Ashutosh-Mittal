@@ -7,7 +7,7 @@ use anchor_spl::{
 
 use mpl_token_metadata::{instructions::{BurnV1CpiBuilder, UnverifyCollectionV1CpiBuilder}};
 
-use crate::error::{NftMintError, RevokeMinerParticipationError};
+use crate::error::{NftMintError};
 use crate::state::{ProgramState, MinerInfo};
 
 #[derive(Accounts)]
@@ -41,13 +41,13 @@ pub struct RevokeMinerParticipation <'info> {
 
     #[account(
         mut,
-        seeds = [
-            b"metadata".as_ref(),
-            metadata_program.key().as_ref(),
-            collection_mint.key().as_ref(),
-        ],
-        bump,
-        seeds::program = metadata_program.key()
+        // seeds = [
+        //     b"metadata".as_ref(),
+        //     metadata_program.key().as_ref(),
+        //     collection_mint.key().as_ref(),
+        // ],
+        // bump,
+        // seeds::program = metadata_program.key()
     )]
 /// CHECK:
     pub nft_collection_metadata: UncheckedAccount<'info>,
@@ -55,14 +55,14 @@ pub struct RevokeMinerParticipation <'info> {
 pub metadata_program: Program<'info, Metadata>,
     #[account(
         mut,
-        seeds = [
-            b"metadata".as_ref(),
-            metadata_program.key().as_ref(),
-            collection_mint.key().as_ref(),
-            b"edition".as_ref(),
-        ],
-        bump,
-        seeds::program = metadata_program.key()
+        // seeds = [
+        //     b"metadata".as_ref(),
+        //     metadata_program.key().as_ref(),
+        //     collection_mint.key().as_ref(),
+        //     b"edition".as_ref(),
+        // ],
+        // bump,
+        // seeds::program = metadata_program.key()
       )]
 
     /// CHECK:
@@ -90,14 +90,14 @@ pub metadata_program: Program<'info, Metadata>,
 
    #[account(
     mut,
-    seeds = [
-        b"metadata".as_ref(),
-        metadata_program.key().as_ref(),
-        miner_nft_mint.key().as_ref(),
-        b"edition".as_ref(),
-    ],  
-    bump,
-    seeds::program = metadata_program.key()
+    // seeds = [
+    //     b"metadata".as_ref(),
+    //     metadata_program.key().as_ref(),
+    //     miner_nft_mint.key().as_ref(),
+    //     b"edition".as_ref(),
+    // ],  
+    // bump,
+    // seeds::program = metadata_program.key()
   )]
 
 /// CHECK:
@@ -105,13 +105,13 @@ pub metadata_program: Program<'info, Metadata>,
 
    #[account(
     mut,
-    seeds = [
-        b"metadata".as_ref(),
-        metadata_program.key().as_ref(),
-        miner_nft_mint.key().as_ref(),
-    ],
-    bump,
-    seeds::program = metadata_program.key()
+    // seeds = [
+    //     b"metadata".as_ref(),
+    //     metadata_program.key().as_ref(),
+    //     miner_nft_mint.key().as_ref(),
+    // ],
+    // bump,
+    // seeds::program = metadata_program.key()
 )]
 
 /// CHECK:

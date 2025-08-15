@@ -2,10 +2,10 @@ use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken, metadata::{
      Metadata
-}, token_2022::{mint_to, MintTo}, token_interface::{ transfer_checked, Mint, TokenAccount, TokenInterface, TransferChecked}
+}, token_interface::{  Mint, TokenAccount, TokenInterface,}
 };
 
-use mpl_token_metadata::{instructions::{CreateV1CpiBuilder, MintV1CpiBuilder, SetAndVerifyCollectionCpiBuilder, VerifyCollectionV1CpiBuilder}, types::{Collection, DataV2, PrintSupply, TokenStandard}};
+use mpl_token_metadata::{instructions::{CreateV1CpiBuilder, MintV1CpiBuilder}, types::{Collection, PrintSupply, TokenStandard}};
 
 use crate::{error::NftMintError};
 use crate::state::{ProgramState, MinerInfo};
