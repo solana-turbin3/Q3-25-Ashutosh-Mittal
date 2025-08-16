@@ -338,7 +338,7 @@ describe("stablecoin-protocol", () => {
    it("✅ User 1 can settle their debt!", async () => {
     try {
  
- 
+
      await program.methods.positionDebtSettlement(new anchor.BN(500)).accountsPartial({
       user: user1.publicKey,
        bhrtCollateralMint: bhrtCollateralMint.publicKey,
