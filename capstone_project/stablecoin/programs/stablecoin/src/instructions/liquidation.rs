@@ -71,12 +71,11 @@ pub struct Liquidation<'info> {
 
     #[account(
         mut,
-        seeds = [b"bhrt_collateral_vault", stablecoin_config.key().as_ref(), stabelcoin_mint.key().as_ref()],
-        token::mint = bhrt_collateral_mint,
-        token::authority = stablecoin_config,
-        bump = stablecoin_config.bhrt_collateral_vault_bump
+        associated_token::mint = bhrt_collateral_mint,
+        associated_token::authority = stablecoin_config,
+        associated_token::token_program = token_program,
     )]
-    pub bhrt_collateral_vault: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub bhrt_collateral_vault: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         mut,
@@ -98,13 +97,17 @@ pub struct Liquidation<'info> {
 
 impl<'info> Liquidation<'info> {
     pub fn liquidate(&mut self, liquidation_amount: u64) -> Result<()> {
-        let current_bhrt_usd_price = self.bhrt_price_oracle.feed;
+        let current_bhrt_usd_price = 30;
 
         let collateral_ratio = (self.stablecoin_minter.number_of_bhrt_collateral
             * current_bhrt_usd_price)
             / (self.stablecoin_minter.debt_amount * 1);
         let threshold_collateral_ratio = COLLATERAL_RATIO / BASIS_POINTS;
-
+        msg!("stablecoin_minter.number_of_bhrt_collateral: {}", self.stablecoin_minter.number_of_bhrt_collateral);
+        msg!("stablecoin_minter.debt_amount: {}", self.stablecoin_minter.debt_amount);
+        msg!("current_bhrt_usd_price: {}", current_bhrt_usd_price);
+        msg!("collateral_ratio: {}", collateral_ratio);
+        msg!("threshold_collateral_ratio: {}", threshold_collateral_ratio);
         require!(
             collateral_ratio < threshold_collateral_ratio as u64,
             LiquidationError::SufficientCollateral

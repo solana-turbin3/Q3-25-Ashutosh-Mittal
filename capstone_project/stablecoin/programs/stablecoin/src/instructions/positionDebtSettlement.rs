@@ -66,10 +66,9 @@ pub struct PositionDebtSettlement<'info> {
 
     #[account(
         mut,
-        seeds = [b"bhrt_collateral_vault", stablecoin_config.key().as_ref(), stabelcoin_mint.key().as_ref()],
-        token::mint = bhrt_collateral_mint,
-        token::authority = stablecoin_config,
-        bump = stablecoin_config.bhrt_collateral_vault_bump
+        associated_token::mint = bhrt_collateral_mint,
+        associated_token::authority = stablecoin_config,
+        associated_token::token_program = token_program,
     )]
     pub bhrt_collateral_vault: Box<InterfaceAccount<'info, TokenAccount>>,
 

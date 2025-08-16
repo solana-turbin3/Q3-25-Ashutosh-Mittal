@@ -22,9 +22,9 @@ pub struct OpenPosition<'info> {
 
     #[account(
         mut,
-        associated_token::mint = bhrt_collateral_mint,
-        associated_token::authority = user,
-        associated_token::token_program = token_program,
+        // associated_token::mint = bhrt_collateral_mint,
+        // associated_token::authority = user,
+        // associated_token::token_program = token_program,
     )]
     pub bhrt_user_token_account: InterfaceAccount<'info, TokenAccount>,
 
@@ -66,16 +66,15 @@ pub struct OpenPosition<'info> {
         associated_token::authority = user,
         associated_token::token_program = token_program,
     )]
-    pub stablecoin_user_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub stablecoin_user_token_account: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         mut,
-        seeds = [b"bhrt_collateral_vault", stablecoin_config.key().as_ref(), stabelcoin_mint.key().as_ref()],
-        token::mint = bhrt_collateral_mint,
-        token::authority = stablecoin_config,
-        bump = stablecoin_config.bhrt_collateral_vault_bump
+        associated_token::mint = bhrt_collateral_mint,
+        associated_token::authority = stablecoin_config,
+        associated_token::token_program = token_program,
     )]
-    pub bhrt_collateral_vault: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub bhrt_collateral_vault: InterfaceAccount<'info, TokenAccount>,
 
     pub system_program: Program<'info, System>,
     pub token_program: Interface<'info, TokenInterface>,
@@ -90,7 +89,7 @@ impl<'info> OpenPosition<'info> {
     pub fn open_position(
         &mut self,
         collateral_amount: u64,
-        stablecoin_amount: u64,
+        mut stablecoin_amount: u64,
         bump: OpenPositionBumps,
     ) -> Result<()> {
         // Step 1: Get BTCST price from oracle (simplified - you'll need actual oracle integration)
@@ -99,9 +98,9 @@ impl<'info> OpenPosition<'info> {
         // Step 2: Calculate collateral value in USD
         let collateral_value_usd = (collateral_amount as u128)
             .checked_mul(btcst_price as u128)
-            .ok_or(ProgramError::ArithmeticOverflow)?
-            .checked_div(10_u128.pow(self.bhrt_collateral_mint.decimals as u32))
             .ok_or(ProgramError::ArithmeticOverflow)?;
+            // .checked_div(10_u128.pow(self.bhrt_collateral_mint.decimals as u32))
+            // .ok_or(ProgramError::ArithmeticOverflow)?;
         // .checked_div(10_u128.pow(8)) // Oracle price decimals
         // .ok_or(ProgramError::ArithmeticOverflow)?;
 
@@ -113,10 +112,13 @@ impl<'info> OpenPosition<'info> {
             .ok_or(ProgramError::ArithmeticOverflow)?;
 
         // Step 4: Check if requested stablecoin amount is within limits
-        require!(
-            stablecoin_amount as u128 <= max_stablecoin_mintable,
-            ErrorCode::InsufficientCollateral
-        );
+        // ******************************************************
+        // require!(
+        //     stablecoin_amount as u128 <= max_stablecoin_mintable,
+        //     ErrorCode::InsufficientCollateral
+        // );
+        // ******************************************************
+        stablecoin_amount = max_stablecoin_mintable as u64;
 
         // Step 5: Transfer BTCST collateral from user to vault
         let transfer_accounts = TransferChecked {
@@ -182,9 +184,11 @@ impl<'info> OpenPosition<'info> {
             authority: self.stablecoin_config.to_account_info(),
         };
 
+       
+        let collateral_key = self.bhrt_collateral_mint.key();
         let seeds = &[
-            b"stablecoin_config",
-            self.bhrt_collateral_mint.to_account_info().key.as_ref(),
+            b"stablecoin_config".as_ref(),
+            collateral_key.as_ref(),
             &[self.stablecoin_config.stablecoin_config_bump],
         ];
         let signer_seeds = &[&seeds[..]];

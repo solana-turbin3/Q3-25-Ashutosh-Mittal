@@ -19,7 +19,7 @@ pub mod stablecoin {
         ctx.accounts.initialize_config_and_vault(ctx.bumps, uri)
     }
 
-    pub fn open_position(ctx: Context<OpenPosition>, collateral_amount: u64, stablecoin_amount: u64) -> Result<()> {
+    pub fn open_position(ctx: Context<OpenPosition>, collateral_amount: u64,stablecoin_amount: u64) -> Result<()> {
         ctx.accounts.open_position(collateral_amount, stablecoin_amount, ctx.bumps)
     }
 

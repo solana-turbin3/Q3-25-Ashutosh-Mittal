@@ -20,7 +20,7 @@ pub struct StablecoinConfig {
     pub total_stablecoin_minted: u64,
     pub stablecoin_config_bump: u8,
     pub stablecoin_mint_bump: u8,
-    pub bhrt_collateral_vault_bump: u8,
+    // pub bhrt_collateral_vault_bump: u8,
 }
 
 #[account]
