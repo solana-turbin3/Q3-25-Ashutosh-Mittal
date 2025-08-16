@@ -174,3 +174,27 @@ impl<'info> InitializeVault<'info> {
     }
 
 }
+
+
+#[derive(Accounts)]
+pub struct changePriceOracle<'info> {
+    #[account(mut)]
+    pub admin: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"bhrt_price_oracle"],
+        bump = bhrt_price_oracle.bhrt_price_oracle_bump
+    )]
+    pub bhrt_price_oracle: Account<'info, PriceFeed>,
+
+    pub system_program: Program<'info, System>,
+    pub token_program: Interface<'info, TokenInterface>,
+}
+
+impl<'info> changePriceOracle<'info> {
+    pub fn change_price_oracle(&mut self, new_price: u64) -> Result<()> {
+        self.bhrt_price_oracle.feed = new_price;
+        Ok(())
+    }
+}

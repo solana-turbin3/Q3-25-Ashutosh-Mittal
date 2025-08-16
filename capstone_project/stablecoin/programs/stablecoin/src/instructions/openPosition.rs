@@ -89,7 +89,7 @@ impl<'info> OpenPosition<'info> {
     pub fn open_position(
         &mut self,
         collateral_amount: u64,
-        mut stablecoin_amount: u64,
+        // mut stablecoin_amount: u64,
         bump: OpenPositionBumps,
     ) -> Result<()> {
         // Step 1: Get BTCST price from oracle (simplified - you'll need actual oracle integration)
@@ -118,7 +118,7 @@ impl<'info> OpenPosition<'info> {
         //     ErrorCode::InsufficientCollateral
         // );
         // ******************************************************
-        stablecoin_amount = max_stablecoin_mintable as u64;
+        // stablecoin_amount = max_stablecoin_mintable as u64;
 
         // Step 5: Transfer BTCST collateral from user to vault
         let transfer_accounts = TransferChecked {
@@ -157,7 +157,7 @@ impl<'info> OpenPosition<'info> {
             user: self.user.key(),
             number_of_bhrt_collateral: collateral_amount,
             bhrt_usd_priced: btcst_price,
-            debt_amount: stablecoin_amount,
+            debt_amount: max_stablecoin_mintable as u64,
             bhrt_collateral_mint: self.bhrt_collateral_mint.key(),
             stablecoin_minter_bump: bump.stablecoin_minter,
         });
@@ -170,7 +170,7 @@ impl<'info> OpenPosition<'info> {
             .ok_or(ProgramError::ArithmeticOverflow)?;
         config.total_stablecoin_minted = config
             .total_stablecoin_minted
-            .checked_add(stablecoin_amount)
+            .checked_add(max_stablecoin_mintable as u64)
             .ok_or(ProgramError::ArithmeticOverflow)?;
         config.number_of_investors = config
             .number_of_investors
@@ -199,11 +199,11 @@ impl<'info> OpenPosition<'info> {
             signer_seeds,
         );
 
-        mint_to(mint_ctx, stablecoin_amount)?;
+        mint_to(mint_ctx, max_stablecoin_mintable as u64)?;
 
         msg!(
             "Minted {} stablecoin against {} BTCST collateral. Collateral ratio: {}%",
-            stablecoin_amount,
+            max_stablecoin_mintable,
             collateral_amount,
             COLLATERAL_RATIO / 100
         );

@@ -210,7 +210,7 @@ describe("stablecoin-protocol", () => {
 
     await provider.sendAndConfirm(setupTx, [user1, admin]);
 
-    await program.methods.openPosition(new anchor.BN(1000), new anchor.BN(500)).accountsPartial({
+    await program.methods.openPosition(new anchor.BN(1000)).accountsPartial({
       user: user1.publicKey,
       bhrtCollateralMint: bhrtCollateralMint.publicKey,
       bhrtUserTokenAccount: user1BHRTTokenAccountAta,
@@ -258,7 +258,7 @@ describe("stablecoin-protocol", () => {
  
      await provider.sendAndConfirm(setupTx2, [user2, admin]);
  
-     await program.methods.openPosition(new anchor.BN(10000), new anchor.BN(5000)).accountsPartial({
+     await program.methods.openPosition(new anchor.BN(10000)).accountsPartial({
        user: user2.publicKey,
        bhrtCollateralMint: bhrtCollateralMint.publicKey,
        bhrtUserTokenAccount: user2BHRTTokenAccountAta,
@@ -284,6 +284,23 @@ describe("stablecoin-protocol", () => {
    });
  
 
+
+   it("✅ Change the price oracle!", async () => {
+    try {
+      await program.methods.changePriceOracle(new anchor.BN(30)).accountsPartial({
+        admin: admin.publicKey,
+        bhrtPriceOracle: bhrtPriceOraclePda,
+        tokenProgram: TOKEN_2022_PROGRAM_ID,
+        systemProgram: web3.SystemProgram.programId,
+      }).signers([admin]).rpc();
+    } catch (error) {
+      console.error("Error during initialization:", error);
+      if (error instanceof anchor.web3.SendTransactionError) {
+        console.error("Transaction Logs:", error.logs);
+      }
+      throw error;
+    }
+   });
      
    it("✅ Liquidator (user 2) can liquidate user 1's position!", async () => {
     try {

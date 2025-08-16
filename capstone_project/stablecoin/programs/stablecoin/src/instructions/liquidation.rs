@@ -97,7 +97,7 @@ pub struct Liquidation<'info> {
 
 impl<'info> Liquidation<'info> {
     pub fn liquidate(&mut self, liquidation_amount: u64) -> Result<()> {
-        let current_bhrt_usd_price = 30;
+        let current_bhrt_usd_price = self.bhrt_price_oracle.feed;
 
         let collateral_ratio = (self.stablecoin_minter.number_of_bhrt_collateral
             * current_bhrt_usd_price)
