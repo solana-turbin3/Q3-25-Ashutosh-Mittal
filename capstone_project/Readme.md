@@ -57,7 +57,7 @@ Furthermore, the protocol introduces a stablecoin, the **Hashprice Standard Toke
 
 ### Liquidation Mechanism
 
--   **Protocol Safety**: If the value of a user's BHRT collateral drops and their collateralization ratio falls **below 150%**, their position becomes eligible for liquidation.
+-   **Protocol Safety**: If the value of a user's BHRT collateral drops and their collateralization ratio falls **below 125%**, their position becomes eligible for liquidation.
 -   **Liquidators**: Any user can act as a liquidator. They can repay the debt (partially or fully) of an under-collateralized position.
 -   **Incentive**: As a reward for securing the protocol, the liquidator receives the seized BHRT collateral from the borrower's position, plus a **5% penalty reward**. This ensures there is a strong financial incentive for the community to keep the protocol solvent.
 
@@ -79,12 +79,12 @@ The protocol is built on a two-program architecture to ensure a clear separation
 
 ### [Program 1: BHRT Minter & AMM](./bhrt_token)
 
--   **ID**: `AbBt8CJq2PrE9WoDR5iSmJXxuFCGcs7PMKUuZKzVxFDD`
+-   **ID**: [`AbBt8CJq2PrE9WoDR5iSmJXxuFCGcs7PMKUuZKzVxFDD`](https://solscan.io/tx/3NmAfsU3kKD5GVUb5o4RBBPEWs92BjgFEkGaDebTWPpFEQ59R3vFRpsteSkgk4Hp6Bx6RxnoDxZNMdNmWyAh7KzD?cluster=devnet)
 -   **Responsibility**: This program handles the entire lifecycle of the BHRT token. It manages miner onboarding, the minting of legal proof NFTs, the issuance of BHRT tokens, and provides an on-chain AMM for BHRT/USDT trading.
 
 ### [Program 2: HST Stablecoin Vault](./stablecoin)
 
--   **ID**: `CCLDZoaXu8EchMrVdVHokdyhBUGgHWBVguMibawESYJj`
+-   **ID**: [`CCLDZoaXu8EchMrVdVHokdyhBUGgHWBVguMibawESYJj`](https://solscan.io/tx/4rRWhPQKiR2DdgfRDzU73TygQSamjbJG7Sw1DGm6Zk6fHaBr4SghD3daMhEB6df6cYfuUsPMnR5ErcJh8Yixqgfc?cluster=devnet)
 -   **Responsibility**: This program manages the CDP protocol. It contains the vault logic for locking BHRT collateral, minting and burning the HST stablecoin, managing user debt positions, and handling liquidations.
 
 ---
@@ -157,8 +157,12 @@ To set up the project locally for development and testing:
 
 1.  **Clone the repository:**
     ```sh
-    git clone <your-repo-url>
-    cd <your-repo-name>
+    git clone --depth 1 --no-checkout git@github.com:solana-turbin3/Q3-25-Ashutosh-Mittal.git project
+    cd project
+    git sparse-checkout init --cone
+    git sparse-checkout set capstone_project
+    git checkout
+    cd capstone_project
     ```
 2.  **Install dependencies:**
     Ensure you have the Rust toolchain, Solana CLI, and Anchor framework installed.
@@ -169,8 +173,4 @@ To set up the project locally for development and testing:
 4.  **Run tests:**
     ```sh
     anchor test
-    ```
-5.  **Deploy to a local ledger or devnet:**
-    ```sh
-    anchor deploy
     ```
