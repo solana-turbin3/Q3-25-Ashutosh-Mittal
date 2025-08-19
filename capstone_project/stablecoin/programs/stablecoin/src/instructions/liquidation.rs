@@ -6,7 +6,7 @@ use anchor_spl::{
     },
 };
 
-use crate::constants::{BASIS_POINTS, COLLATERAL_RATIO};
+use crate::{constants::{BASIS_POINTS}, LIQUIDATION_THRESHOLD};
 use crate::{
     error::LiquidationError,
     state::{StablecoinConfig, StablecoinMinter},
@@ -102,7 +102,7 @@ impl<'info> Liquidation<'info> {
         let collateral_ratio = (self.stablecoin_minter.number_of_bhrt_collateral
             * current_bhrt_usd_price)
             / (self.stablecoin_minter.debt_amount * 1);
-        let threshold_collateral_ratio = COLLATERAL_RATIO / BASIS_POINTS;
+        let threshold_collateral_ratio = LIQUIDATION_THRESHOLD / BASIS_POINTS;
         msg!("stablecoin_minter.number_of_bhrt_collateral: {}", self.stablecoin_minter.number_of_bhrt_collateral);
         msg!("stablecoin_minter.debt_amount: {}", self.stablecoin_minter.debt_amount);
         msg!("current_bhrt_usd_price: {}", current_bhrt_usd_price);

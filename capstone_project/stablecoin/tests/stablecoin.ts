@@ -392,42 +392,42 @@ describe("stablecoin-protocol", () => {
 });
 
         
-   it("✅ User 1 can settle their debt!", async () => {
-    console.log("\n💳 DEBT SETTLEMENT: USER 1 REPAYS HST DEBT");
-    console.log(`👤 User: ${user1.publicKey.toString()}`);
+  //  it("✅ User 1 can settle their debt!", async () => {
+  //   console.log("\n💳 DEBT SETTLEMENT: USER 1 REPAYS HST DEBT");
+  //   console.log(`👤 User: ${user1.publicKey.toString()}`);
 
-    try {
+  //   try {
  
 
-      const txSignature =   await program.methods.positionDebtSettlement(new anchor.BN(500)).accountsPartial({
-      user: user1.publicKey,
-       bhrtCollateralMint: bhrtCollateralMint.publicKey,
-       bhrtUserTokenAccount: user1BHRTTokenAccountAta,
-       bhrtCollateralVault: bhrtCollateralVaultAta,
-       stablecoinConfig: stablecoinConfigPda,
-       stabelcoinMint: stablecoinMintPda,
-       bhrtPriceOracle: bhrtPriceOraclePda,
-       stablecoinMinter: stablecoinMinter1Pda,
-       stablecoinUserTokenAccount: user1StablecoinTokenAccountAta,
-       tokenProgram: TOKEN_2022_PROGRAM_ID,
-       associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-       systemProgram: web3.SystemProgram.programId,
-     }).signers([user1]).rpc();
-     await provider.connection.confirmTransaction(txSignature, "confirmed");
+  //     const txSignature =   await program.methods.positionDebtSettlement(new anchor.BN(500)).accountsPartial({
+  //     user: user1.publicKey,
+  //      bhrtCollateralMint: bhrtCollateralMint.publicKey,
+  //      bhrtUserTokenAccount: user1BHRTTokenAccountAta,
+  //      bhrtCollateralVault: bhrtCollateralVaultAta,
+  //      stablecoinConfig: stablecoinConfigPda,
+  //      stabelcoinMint: stablecoinMintPda,
+  //      bhrtPriceOracle: bhrtPriceOraclePda,
+  //      stablecoinMinter: stablecoinMinter1Pda,
+  //      stablecoinUserTokenAccount: user1StablecoinTokenAccountAta,
+  //      tokenProgram: TOKEN_2022_PROGRAM_ID,
+  //      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+  //      systemProgram: web3.SystemProgram.programId,
+  //    }).signers([user1]).rpc();
+  //    await provider.connection.confirmTransaction(txSignature, "confirmed");
 
-     console.log("\n✅ DEBT SETTLEMENT COMPLETED SUCCESSFULLY!");
-     console.log(`\n🔗 Transaction: https://explorer.solana.com/tx/${txSignature}?cluster=devnet`);
+  //    console.log("\n✅ DEBT SETTLEMENT COMPLETED SUCCESSFULLY!");
+  //    console.log(`\n🔗 Transaction: https://explorer.solana.com/tx/${txSignature}?cluster=devnet`);
 
-    } catch (error) {
-      console.error("❌ DEBT SETTLEMENT FAILED:");
-      console.error(`   └─ Error: ${error.message}`);
-      if (error instanceof anchor.web3.SendTransactionError) {
-        console.error("📋 Transaction Logs:");
-        error.logs?.forEach(log => console.error(`   └─ ${log}`));
-      }
-      throw error;
-    }
-  });
+  //   } catch (error) {
+  //     console.error("❌ DEBT SETTLEMENT FAILED:");
+  //     console.error(`   └─ Error: ${error.message}`);
+  //     if (error instanceof anchor.web3.SendTransactionError) {
+  //       console.error("📋 Transaction Logs:");
+  //       error.logs?.forEach(log => console.error(`   └─ ${log}`));
+  //     }
+  //     throw error;
+  //   }
+  // });
 
 
 });

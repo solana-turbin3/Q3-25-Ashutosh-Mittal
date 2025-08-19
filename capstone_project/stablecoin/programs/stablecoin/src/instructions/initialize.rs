@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token::Token, // legacy SPL Token for BHRT only
+    
     token_interface::{
         token_metadata_initialize, Mint, TokenAccount, TokenInterface, TokenMetadataInitialize,
     },

@@ -8,7 +8,6 @@ use anchor_spl::{
 
 use crate::constants::{BASIS_POINTS, COLLATERAL_RATIO};
 use crate::{
-    error::ErrorCode,
     state::{StablecoinConfig, StablecoinMinter},
     PriceFeed,
 };
